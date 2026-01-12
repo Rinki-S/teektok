@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { AppTopbar } from "@/components/app-topbar"
-import { ThemeProvider } from "@/components/theme-provider"
-import { ShortsNavigator } from "@/components/shorts-navigator";
-import { ShortsActions } from "@/components/shorts-actions";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppTopbar } from "@/components/app-topbar";
+import { ThemeProvider } from "@/components/theme-provider";
+import {
+  ShortsNavProvider,
+  ShortsNavigatorPresenter,
+} from "@/components/shorts-nav-context";
 
-const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-sans' });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,24 +41,32 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="dark"
           enableSystem
-          disableTransitionOnChange>
-          <SidebarProvider style={{
-            "--sidebar-width": "10rem"
-          }}>
-            <AppSidebar />
-            <main className="flex min-h-svh flex-1 flex-col bg-sidebar">
-              <AppTopbar />
-              <div id="content-wrapper" className="flex flex-row flex-1 items-center gap-4 md:pr-4 md:pb-4">
-                <div id="rounded-container" className="relative flex flex-1 h-full h-col rounded-t-3xl md:rounded-3xl bg-background">
-                  {children}
-                  <div className="absolute bottom-4 right-4">
-                    <ShortsActions />
+          disableTransitionOnChange
+        >
+          <ShortsNavProvider>
+            <SidebarProvider
+              style={
+                {
+                  "--sidebar-width": "10rem",
+                } as React.CSSProperties
+              }
+            >
+              <AppSidebar />
+              <main className="flex h-svh max-h-svh flex-1 flex-col overflow-hidden bg-sidebar">
+                <AppTopbar />
+                <div
+                  id="content-wrapper"
+                  className="flex min-h-0 flex-row flex-1 items-center gap-4 overflow-hidden"
+                >
+                  <div className="flex min-h-0 h-full w-full flex-1">
+                    {children}
                   </div>
+
+                  <ShortsNavigatorPresenter className="hidden md:flex h-full min-h-0 items-center mr-4" />
                 </div>
-                <ShortsNavigator />
-              </div>
-            </main>
-          </SidebarProvider>
+              </main>
+            </SidebarProvider>
+          </ShortsNavProvider>
         </ThemeProvider>
       </body>
     </html>
