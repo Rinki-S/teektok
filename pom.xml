@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.Yunzhu</groupId>
-    <artifactId>book-sys</artifactId>
+    <artifactId>teektok</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>book-sys</name>
-    <description>book-sys</description>
+    <name>teektok</name>
+    <description>teektok</description>
     <url/>
     <licenses>
         <license/>
