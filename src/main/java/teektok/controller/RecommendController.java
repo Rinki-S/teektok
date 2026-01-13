@@ -15,7 +15,7 @@ import java.util.List;
 
 @Tag(name = "推荐与排行榜模块")
 @RestController
-@RequestMapping("/recommend")
+@RequestMapping("/api/recommend")
 public class RecommendController {
 
     @Autowired

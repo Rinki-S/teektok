@@ -12,7 +12,7 @@ import teektok.service.IAnalysisService;
 
 @Tag(name = "数据分析模块", description = "提供全站或个人的数据统计服务")
 @RestController
-@RequestMapping("/analysis")
+@RequestMapping("/api/analysis")
 public class AnalysisController {
 
     @Autowired

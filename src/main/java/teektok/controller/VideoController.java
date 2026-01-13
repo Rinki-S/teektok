@@ -16,7 +16,7 @@ import teektok.service.IVideoService;
 
 
 @RestController
-@RequestMapping("/api/video")
+@RequestMapping("/api/api/video")
 @Tag(name = "视频模块")
 public class VideoController {
     private final IVideoService videoService;

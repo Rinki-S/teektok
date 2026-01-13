@@ -10,7 +10,7 @@ import teektok.service.IAdminService;
 
 @Tag(name = "管理员模块")
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/api/admin")
 public class AdminController {
 
     @Autowired
@@ -28,9 +28,9 @@ public class AdminController {
     @PostMapping("/user/status")
     public Result<Void> changeUserStatus(
             @RequestParam("userId") Long userId,
-            @RequestParam("token") Integer token
+            @RequestParam("status") Integer status
             ) {
-        adminService.ChangeUserStatus(userId, token);
+        adminService.ChangeUserStatus(userId, status);
         return Result.success();
     }
 
@@ -45,7 +45,7 @@ public class AdminController {
     @PostMapping("/video/hot")
     public Result<Void> setHot(
             @RequestParam("videoId") Long videoId,
-            @RequestParam("token") Boolean hot
+            @RequestParam("hot") Boolean hot
     ) {
         adminService.setHotVideo(videoId, hot);
         return Result.success();

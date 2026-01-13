@@ -15,7 +15,7 @@ import teektok.service.IBehaviorService;
 
 @Tag(name = "用户行为模块", description = "处理点赞、评论、转发等互动行为")
 @RestController
-@RequestMapping("/behavior")
+@RequestMapping("/api/behavior")
 public class BehaviorController {
 
     @Autowired
