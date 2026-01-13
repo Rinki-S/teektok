@@ -104,7 +104,6 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
       <motion.div
         className="relative w-full h-full"
         onDoubleClick={handleDoubleTap}
-        whileTap={{ scale: 0.98 }}
       >
         <video
           ref={videoRef}

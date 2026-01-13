@@ -1,22 +1,15 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { motion, useMotionValue, animate } from "framer-motion";
 import type { Video } from "@/types/video";
 import { ShortCard } from "@/components/short-card";
-
-/**
- * TikTok-like page enter/exit:
- * - Cards should travel edge-to-edge and clearly come from outside the viewport.
- * - While a new card enters, the current card should *simultaneously* leave in the opposite direction.
- *
- * Strategy:
- * - Render TWO full cards during a transition: previous + current.
- * - Animate them simultaneously with a snappy tween (minimal bounce).
- * - Use a travel distance > container height to make the motion feel like it comes from outside the page.
- */
-
-type Direction = -1 | 0 | 1;
 
 export type VideoFeedHandle = {
   goToNext: () => void;
@@ -60,31 +53,127 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
   ) {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Keep a previous card rendered during transitions.
-    const [prevIndex, setPrevIndex] = useState<number | null>(null);
-    const [direction, setDirection] = useState<Direction>(0);
+    /**
+     * A real TikTok-like vertical pager:
+     * - Always render 3 pages: prev/current/next (when available)
+     * - Drag the STAGE with your finger (follow gesture)
+     * - Snap on release, and only then commit index change
+     */
+    const y = useMotionValue(0);
 
-    // Used to avoid stale animation completion clearing a newer transition.
-    const transitionKeyRef = useRef(0);
-    const lastIndexRef = useRef<number>(currentIndex);
+    const heightRef = useRef(0);
+    const isAnimatingRef = useRef(false);
 
-    const clampIndex = (idx: number) =>
-      Math.max(0, Math.min(videos.length - 1, idx));
+    const [localIndex, setLocalIndex] = useState(currentIndex);
 
-    const requestIndex = (idx: number, dir: Direction) => {
-      const next = clampIndex(idx);
-      if (next === currentIndex) return;
+    const clampIndex = useCallback(
+      (idx: number) => Math.max(0, Math.min(videos.length - 1, idx)),
+      [videos.length],
+    );
 
-      // Capture previous index and direction immediately for animation.
-      setPrevIndex(currentIndex);
-      setDirection(dir);
-      transitionKeyRef.current += 1;
+    // Sync localIndex with controlled index (e.g. external navigator buttons).
+    // We animate to the corresponding direction so it still feels like a pager.
+    useEffect(() => {
+      if (currentIndex === localIndex) return;
 
-      onIndexChange(next);
-    };
+      const next = clampIndex(currentIndex);
+      const dir = next > localIndex ? 1 : -1;
 
-    const goToNext = () => requestIndex(currentIndex + 1, 1);
-    const goToPrev = () => requestIndex(currentIndex - 1, -1);
+      // If we don't know height yet, just sync immediately.
+      const h = heightRef.current || 0;
+      if (h <= 0) {
+        setLocalIndex(next);
+        y.set(0);
+        return;
+      }
+
+      // Avoid stacking animations.
+      isAnimatingRef.current = true;
+
+      // Animate stage to reveal the next/prev, then commit.
+      animate(y, dir === 1 ? -h : h, {
+        type: "tween",
+        ease: "easeInOut",
+        duration: 0.22,
+        onComplete: () => {
+          setLocalIndex(next);
+          y.set(0);
+          isAnimatingRef.current = false;
+        },
+      });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentIndex]);
+
+    // Measure container height (used for snap distances).
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+
+      const update = () => {
+        heightRef.current = el.getBoundingClientRect().height || 0;
+      };
+
+      update();
+
+      const ro = new ResizeObserver(() => update());
+      ro.observe(el);
+
+      return () => ro.disconnect();
+    }, []);
+
+    const canGoPrev = localIndex > 0;
+    const canGoNext = localIndex < videos.length - 1;
+
+    const commitIndex = useCallback(
+      (nextIndex: number) => {
+        const next = clampIndex(nextIndex);
+        if (next === localIndex) return;
+        setLocalIndex(next);
+        onIndexChange(next);
+      },
+      [clampIndex, localIndex, onIndexChange],
+    );
+
+    const snapTo = useCallback(
+      async (targetY: number, nextIndexAfter?: number) => {
+        isAnimatingRef.current = true;
+
+        await animate(y, targetY, {
+          type: "tween",
+          ease: "easeInOut",
+          duration: 0.22,
+        }).finished;
+
+        if (typeof nextIndexAfter === "number") {
+          // Commit after the motion, then reset stage to centered (0).
+          commitIndex(nextIndexAfter);
+        }
+
+        y.set(0);
+        isAnimatingRef.current = false;
+      },
+      [commitIndex, y],
+    );
+
+    const goToNext = useCallback(() => {
+      if (!canGoNext || isAnimatingRef.current) return;
+      const h = heightRef.current || 0;
+      if (h <= 0) {
+        commitIndex(localIndex + 1);
+        return;
+      }
+      void snapTo(-h, localIndex + 1);
+    }, [canGoNext, commitIndex, localIndex, snapTo]);
+
+    const goToPrev = useCallback(() => {
+      if (!canGoPrev || isAnimatingRef.current) return;
+      const h = heightRef.current || 0;
+      if (h <= 0) {
+        commitIndex(localIndex - 1);
+        return;
+      }
+      void snapTo(h, localIndex - 1);
+    }, [canGoPrev, commitIndex, localIndex, snapTo]);
 
     React.useImperativeHandle(
       ref,
@@ -95,23 +184,6 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
       [goToNext, goToPrev],
     );
 
-    // Keep local direction/prevIndex in sync even if parent changes index externally
-    // (e.g., via navigator buttons in layout).
-    useEffect(() => {
-      if (currentIndex === lastIndexRef.current) return;
-
-      const last = lastIndexRef.current;
-      const next = currentIndex;
-
-      setPrevIndex(last);
-
-      const dir: Direction = next > last ? 1 : -1;
-      setDirection(dir);
-
-      transitionKeyRef.current += 1;
-      lastIndexRef.current = next;
-    }, [currentIndex]);
-
     // Wheel navigation (desktop)
     useEffect(() => {
       const el = containerRef.current;
@@ -120,29 +192,30 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
       let throttled = false;
 
       const onWheel = (e: WheelEvent) => {
-        // Prevent page scroll
         e.preventDefault();
-        if (throttled) return;
+        if (throttled || isAnimatingRef.current) return;
 
-        if (e.deltaY > 50) {
+        if (e.deltaY > 40) {
           goToNext();
           throttled = true;
-          setTimeout(() => (throttled = false), 650);
-        } else if (e.deltaY < -50) {
+          setTimeout(() => (throttled = false), 450);
+        } else if (e.deltaY < -40) {
           goToPrev();
           throttled = true;
-          setTimeout(() => (throttled = false), 650);
+          setTimeout(() => (throttled = false), 450);
         }
       };
 
       el.addEventListener("wheel", onWheel, { passive: false });
       return () => el.removeEventListener("wheel", onWheel);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentIndex, videos.length]);
+    }, [localIndex, videos.length]);
 
     // Keyboard navigation
     useEffect(() => {
       const onKeyDown = (e: KeyboardEvent) => {
+        if (isAnimatingRef.current) return;
+
         if (e.key === "ArrowDown") {
           e.preventDefault();
           goToNext();
@@ -155,9 +228,9 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
       window.addEventListener("keydown", onKeyDown);
       return () => window.removeEventListener("keydown", onKeyDown);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentIndex, videos.length]);
+    }, [localIndex, videos.length]);
 
-    // Touch navigation (mobile)
+    // Touch navigation (mobile) fallback (for non-drag interactions)
     useEffect(() => {
       const el = containerRef.current;
       if (!el) return;
@@ -170,20 +243,20 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
       };
 
       const onTouchEnd = (e: TouchEvent) => {
-        if (throttled) return;
+        if (throttled || isAnimatingRef.current) return;
 
         const endY = e.changedTouches[0]?.clientY ?? 0;
         const diff = startY - endY; // positive = swipe up
-        const threshold = 50;
+        const threshold = 60;
 
         if (diff > threshold) {
           goToNext();
           throttled = true;
-          setTimeout(() => (throttled = false), 650);
+          setTimeout(() => (throttled = false), 450);
         } else if (diff < -threshold) {
           goToPrev();
           throttled = true;
-          setTimeout(() => (throttled = false), 650);
+          setTimeout(() => (throttled = false), 450);
         }
       };
 
@@ -195,56 +268,18 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
         el.removeEventListener("touchend", onTouchEnd);
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentIndex, videos.length]);
+    }, [localIndex, videos.length]);
 
-    // Drag navigation (drag only the current card)
-    const handleDragEnd = (
-      _: unknown,
-      info: { offset: { y: number }; velocity: { y: number } },
-    ) => {
-      const threshold = 140;
-      const v = info.velocity.y;
+    const currentVideo = videos[localIndex] ?? null;
 
-      if (info.offset.y < -threshold || v < -700) {
-        goToNext();
-      } else if (info.offset.y > threshold || v > 700) {
-        goToPrev();
-      }
-    };
+    const pages = useMemo(() => {
+      const prev = localIndex > 0 ? videos[localIndex - 1] : null;
+      const cur = videos[localIndex] ?? null;
+      const next =
+        localIndex < videos.length - 1 ? videos[localIndex + 1] : null;
 
-    const currentVideo = videos[currentIndex] ?? null;
-    const prevVideo =
-      prevIndex !== null && prevIndex >= 0 && prevIndex < videos.length
-        ? videos[prevIndex]
-        : null;
-
-    const slides = useMemo(() => {
-      const items: Array<{
-        kind: "prev" | "current";
-        video: Video;
-        index: number;
-      }> = [];
-
-      if (
-        prevVideo &&
-        prevIndex !== null &&
-        prevIndex !== currentIndex &&
-        prevIndex >= 0 &&
-        prevIndex < videos.length
-      ) {
-        items.push({ kind: "prev", video: prevVideo, index: prevIndex });
-      }
-
-      if (currentVideo) {
-        items.push({
-          kind: "current",
-          video: currentVideo,
-          index: currentIndex,
-        });
-      }
-
-      return items;
-    }, [prevVideo, prevIndex, currentVideo, currentIndex, videos.length]);
+      return { prev, cur, next };
+    }, [localIndex, videos]);
 
     if (!currentVideo) {
       return (
@@ -254,73 +289,61 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
       );
     }
 
-    // More obvious edge-to-edge travel.
-    const containerHeight =
-      containerRef.current?.getBoundingClientRect().height ?? 0;
+    const handleStageDragEnd = (
+      _: unknown,
+      info: { offset: { y: number }; velocity: { y: number } },
+    ) => {
+      if (isAnimatingRef.current) return;
 
-    // Add a small gap so the incoming and outgoing cards don't "kiss" at the midpoint.
-    // This slightly increases the travel distance in both directions.
-    const TRANSITION_GAP_PX = 16;
+      const h = heightRef.current || 0;
+      if (h <= 0) return;
 
-    const travelY = Math.max(containerHeight, 700) + TRANSITION_GAP_PX;
+      const offsetY = info.offset.y;
+      const vY = info.velocity.y;
 
-    // direction 1 (next): current enters from bottom; prev exits to top
-    // direction -1 (prev): current enters from top; prev exits to bottom
-    const currentStartY = direction === 1 ? travelY : -travelY;
-    const prevExitY = direction === 1 ? -travelY : travelY;
+      // Tune for "TikTok-like" snap.
+      const threshold = Math.min(180, h * 0.22);
+
+      // Dragging up => negative offset => go next (stage snaps to -h)
+      if ((offsetY < -threshold || vY < -700) && canGoNext) {
+        void snapTo(-h, localIndex + 1);
+        return;
+      }
+
+      // Dragging down => positive offset => go prev (stage snaps to +h)
+      if ((offsetY > threshold || vY > 700) && canGoPrev) {
+        void snapTo(h, localIndex - 1);
+        return;
+      }
+
+      // Not enough: bounce back to center
+      void snapTo(0);
+    };
 
     return (
-      <div
-        ref={containerRef}
-        className="relative h-full w-full min-h-0 overflow-visible"
-      >
-        {/* Mask only the actual feed viewport, not the stage bleed area */}
+      <div ref={containerRef} className="relative h-full w-full min-h-0">
+        {/* Viewport mask */}
         <div className="relative h-full w-full min-h-0 overflow-hidden">
-          {slides.map((s) => {
-            const isCurrent = s.kind === "current";
-            const activeTransitionKey = transitionKeyRef.current;
-
-            const hasPrev =
-              prevVideo && prevIndex !== null && prevIndex !== currentIndex;
-
-            // IMPORTANT:
-            // - Current card enters from outside (currentStartY) when transitioning.
-            // - Previous card simultaneously leaves to prevExitY.
-            const initial = hasPrev
-              ? { y: isCurrent ? currentStartY : 0, opacity: 1 }
-              : { y: 0, opacity: 1 };
-
-            const animate = hasPrev
-              ? { y: isCurrent ? 0 : prevExitY, opacity: 1 }
-              : { y: 0, opacity: 1 };
-
-            return (
-              <motion.div
-                key={`${s.kind}-${s.video.id}-${s.index}`}
+          {/* Stage: translate follows drag; pages are stacked at -100%/0/+100% */}
+          <motion.div
+            className="absolute inset-0"
+            style={{ y }}
+            drag={isAnimatingRef.current ? false : "y"}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            // Increase elasticity so a shorter cursor drag reveals more of prev/next pages.
+            // Higher = more responsive reveal, but too high can feel rubbery.
+            dragElastic={0.7}
+            onDragEnd={handleStageDragEnd}
+          >
+            {/* Prev page */}
+            {pages.prev ? (
+              <div
                 className="absolute inset-0"
-                style={{ zIndex: isCurrent ? 2 : 1 }}
-                initial={initial}
-                animate={animate}
-                transition={{
-                  // Linear tween: constant-speed slide (requested)
-                  y: { type: "tween", ease: "easeInOut", duration: 0.25 },
-                  opacity: { type: "tween", ease: "easeInOut", duration: 0.25 },
-                }}
-                drag={isCurrent ? "y" : false}
-                dragConstraints={isCurrent ? { top: 0, bottom: 0 } : undefined}
-                dragElastic={isCurrent ? 0.08 : undefined}
-                onDragEnd={isCurrent ? handleDragEnd : undefined}
-                onAnimationComplete={() => {
-                  // After the transition completes, drop the previous card.
-                  if (!isCurrent) return;
-                  if (transitionKeyRef.current !== activeTransitionKey) return;
-                  setPrevIndex(null);
-                  setDirection(0);
-                }}
+                style={{ transform: "translateY(-100%)" }}
               >
                 <ShortCard
-                  video={s.video}
-                  isActive={isCurrent}
+                  video={pages.prev}
+                  isActive={false}
                   onLike={onLike}
                   onComment={onComment}
                   onBookmark={onBookmark}
@@ -329,12 +352,55 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
                   className="h-full w-full"
                 >
                   <div className="pointer-events-none absolute left-4 top-4 z-30 rounded bg-black/70 px-2 py-1 text-xs text-white">
-                    {s.index + 1} / {videos.length}
+                    {localIndex} / {videos.length}
                   </div>
                 </ShortCard>
-              </motion.div>
-            );
-          })}
+              </div>
+            ) : null}
+
+            {/* Current page */}
+            {pages.cur ? (
+              <div className="absolute inset-0">
+                <ShortCard
+                  video={pages.cur}
+                  isActive={true}
+                  onLike={onLike}
+                  onComment={onComment}
+                  onBookmark={onBookmark}
+                  onShare={onShare}
+                  onFollow={onFollow}
+                  className="h-full w-full"
+                >
+                  <div className="pointer-events-none absolute left-4 top-4 z-30 rounded bg-black/70 px-2 py-1 text-xs text-white">
+                    {localIndex + 1} / {videos.length}
+                  </div>
+                </ShortCard>
+              </div>
+            ) : null}
+
+            {/* Next page */}
+            {pages.next ? (
+              <div
+                className="absolute inset-0"
+                style={{ transform: "translateY(100%)" }}
+              >
+                <ShortCard
+                  video={pages.next}
+                  isActive={false}
+                  onLike={onLike}
+                  onComment={onComment}
+                  onBookmark={onBookmark}
+                  onShare={onShare}
+                  onFollow={onFollow}
+                  className="h-full w-full"
+                >
+                  <div className="pointer-events-none absolute left-4 top-4 z-30 rounded bg-black/70 px-2 py-1 text-xs text-white">
+                    {localIndex + 2} / {videos.length}
+                  </div>
+                </ShortCard>
+              </div>
+            ) : null}
+          </motion.div>
         </div>
       </div>
     );
