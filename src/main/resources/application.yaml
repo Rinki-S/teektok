@@ -7,7 +7,7 @@ spring:
     url: jdbc:mysql://localhost:3306/teektok?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     # 请替换为你自己的 MySQL 密码
-    password: "123456"
+    password: "1234"
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 # MyBatis Plus 配置
