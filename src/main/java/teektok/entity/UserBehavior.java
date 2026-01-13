@@ -8,25 +8,19 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("video")
-public class Video {
-
+@TableName("user_behavior")
+public class UserBehavior {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String title;
-
-    private String url;
-
-    private String coverUrl;
-
     private Long userId;
 
-    private Long playCount;
+    private Long videoId;
 
-    private Long likeCount;
-
-    private Integer status;
+    /**
+     * 行为类型：1播放 2点赞 3收藏 4评论 5转发
+     */
+    private Integer behaviorType;
 
     private LocalDateTime createTime;
 }

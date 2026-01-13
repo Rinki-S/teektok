@@ -8,25 +8,21 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("video")
-public class Video {
-
+@TableName("comment")
+public class Comment {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String title;
-
-    private String url;
-
-    private String coverUrl;
+    private Long videoId;
 
     private Long userId;
 
-    private Long playCount;
+    private String content;
 
-    private Long likeCount;
-
-    private Integer status;
+    /**
+     * 父评论ID（可选，用于回复功能）
+     */
+    private Long parentId;
 
     private LocalDateTime createTime;
 }

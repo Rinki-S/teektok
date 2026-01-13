@@ -8,25 +8,14 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("video")
-public class Video {
-
+@TableName("admin")
+public class Admin {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String title;
+    private String username;
 
-    private String url;
-
-    private String coverUrl;
-
-    private Long userId;
-
-    private Long playCount;
-
-    private Long likeCount;
-
-    private Integer status;
+    private String password;
 
     private LocalDateTime createTime;
 }
