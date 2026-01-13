@@ -4,56 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1e7d8caa-d844-4ee5-8718-70b0f4b5ad46" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/VO/PageResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/controller/AdminController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/controller/AnalysisController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/controller/BehaviorController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/controller/RecommendController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/controller/VideoController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/audit/AdminLoginVO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/behavior/ShareDTO.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/commen/Result.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/commen/ResultCode.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/entity/Video.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/mapper/VideoMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/BehaviorEventPublisher.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/IAdminService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/IAnalysisService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/IBehaviorService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/IRecommendEngine.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/IRecommendService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/IUserService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/IVideoService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/AdminServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/AnalysisServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/BehaviorServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/KafkaBehaviorEventPublisher.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/LogBehaviorEventPublisher.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/RecommendServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/SimpleRecommendEngine.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/UserServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/VideoServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/application.application" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/controller/UserInfoController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/controller/UserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/Result.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/analysis/VideoAnalysisVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/analysis/VideoAnalysisVO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/behavior/BehaviorDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/behavior/BehaviorDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/comment/CommentCreateDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/comment/CommentCreateDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/recommend/PersonalRecommendDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/recommend/PersonalRecommendDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/video/VideoUploadDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/video/VideoUploadDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/video/VideoVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/video/VideoVO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/entity/UserInfo.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/teektokApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/teektokApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" />
-    </list>
+    <list default="true" id="1e7d8caa-d844-4ee5-8718-70b0f4b5ad46" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -112,6 +63,7 @@
     "RequestMappingsPanelWidth0": "75",
     "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "Spring Boot.teektokApplication.executor": "Run",
     "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
@@ -157,7 +109,7 @@
       <updated>1761567659200</updated>
       <workItem from="1761567660477" duration="885000" />
       <workItem from="1768204670478" duration="3486000" />
-      <workItem from="1768266533593" duration="10668000" />
+      <workItem from="1768266533593" duration="13192000" />
     </task>
     <servers />
   </component>
