@@ -1,0 +1,33 @@
+package teektok.service;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import teektok.VO.PageResult;
+import teektok.dto.recommend.RecommendVideoVO;
+import teektok.dto.video.VideoListVO;
+import teektok.dto.video.VideoQueryDTO;
+import teektok.dto.video.VideoUploadDTO;
+import teektok.dto.video.VideoVO;
+
+import java.util.List;
+
+public interface IVideoService {
+    /*
+     * 上传短视频
+     * */
+    void upload(VideoUploadDTO videoUploadDTO);
+
+    /*
+     * 获取视频列表(分页)
+     * */
+    PageResult<VideoVO> list(VideoQueryDTO videoQueryDTO);
+
+    /*
+     * 播放视频（记录播放行为）
+     * */
+    void play(Long videoId, Long userId);
+
+    /**
+     * 根据视频 ID 列表，获取推荐展示用的视频信息
+     */
+    List<RecommendVideoVO> getVideoRecommendVOs(List<Long> videoIds);
+}

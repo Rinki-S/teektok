@@ -6,19 +6,9 @@ import lombok.Data;
 @Data
 @Schema(description = "视频信息响应")
 public class VideoVO {
-    private Integer id;
-
+    private Long videoId;
     private String title;
-
-    private String videoUrl;
-
     private String coverUrl;
-
-    private String description;
-
-    private Integer playCount;
-
-    private Integer likeCount;
-
-    private Integer commentCount;
+    private Long playCount;
+    private Long likeCount;
 }

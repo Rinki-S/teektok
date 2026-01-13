@@ -9,5 +9,5 @@ import lombok.Data;
 @Schema(description = "获取个性化推荐请求")
 public class PersonalRecommendDto {
     @Schema(description = "用户ID")
-    private Integer userId;
+    private Long userId;
 }
