@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import teektok.VO.PageResult;
+import teektok.dto.behavior.PlayDTO;
 import teektok.dto.commen.Result;
 import teektok.dto.video.VideoQueryDTO;
 import teektok.dto.video.VideoUploadDTO;
@@ -44,13 +45,8 @@ public class VideoController {
 
     @Operation(summary = "播放视频（记录播放行为）")
     @PostMapping("/play")
-    public Result<Void> play(
-            @RequestParam("videoId") Long videoId
-    ) {
-        // userId 实际应从登录态获取，这里先占位
-        Long userId = 1L;
-
-        videoService.play(videoId, userId);
+    public Result<Void> play(@RequestBody PlayDTO dto) {
+        videoService.play(dto);
         return Result.success();
     }
 }

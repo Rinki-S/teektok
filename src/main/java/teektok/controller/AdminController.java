@@ -30,7 +30,7 @@ public class AdminController {
             @RequestParam("userId") Long userId,
             @RequestParam("token") Integer token
             ) {
-        adminService.updateUserStatus(userId, token);
+        adminService.ChangeUserStatus(userId, token);
         return Result.success();
     }
 

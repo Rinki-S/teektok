@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import teektok.VO.PageResult;
+import teektok.dto.behavior.PlayDTO;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.dto.video.VideoListVO;
 import teektok.dto.video.VideoQueryDTO;
@@ -48,7 +49,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     }
 
     @Override
-    public void play(Long videoId, Long userId) {
+    public void play(PlayDTO playDTO) {
 
     }
 

@@ -2,6 +2,7 @@ package teektok.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import teektok.VO.PageResult;
+import teektok.dto.behavior.PlayDTO;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.dto.video.VideoListVO;
 import teektok.dto.video.VideoQueryDTO;
@@ -24,7 +25,7 @@ public interface IVideoService {
     /*
      * 播放视频（记录播放行为）
      * */
-    void play(Long videoId, Long userId);
+    void play(PlayDTO playDTO);
 
     /**
      * 根据视频 ID 列表，获取推荐展示用的视频信息

@@ -13,7 +13,7 @@ public interface IAdminService {
     /**
      * 冻结 / 解封用户
      */
-    void updateUserStatus(Long userId, Integer status);
+    void ChangeUserStatus(Long userId, Integer status);
 
     /**
      * 审核视频

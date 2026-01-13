@@ -16,7 +16,7 @@ public class AdminServiceImpl implements IAdminService {
     }
 
     @Override
-    public void updateUserStatus(Long userId, Integer status) {
+    public void ChangeUserStatus(Long userId, Integer status) {
 
     }
 
