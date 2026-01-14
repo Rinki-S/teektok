@@ -1,269 +1,232 @@
 // ============================================
-// 视频 API 服务
+// 视频 API 服务（对齐 OpenAPI: http://localhost:8080/v3/api-docs）
 // ============================================
-// 这个文件包含所有与视频相关的 API 调用
-// TODO: 将所有 API_BASE_URL 替换为实际的后端地址
+//
+// 本文件负责 frontend-web 中所有与视频相关的 API 调用。
+// 注意：OpenAPI 的 paths 已经包含 `/api` 前缀（例如：/api/recommend/hot、/api/api/video/list），
+// 因此 base URL 需要是 server root（不带 /api），避免拼出 /api/api/... 的重复前缀。
 
 import type {
   Video,
   VideoListResponse,
   LikeVideoRequest,
   BookmarkVideoRequest,
-  FollowUserRequest
-} from '@/types/video';
+  FollowUserRequest,
+} from "@/types/video";
 
-// TODO: 从环境变量读取
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
-
-// ============================================
-// 假数据（开发用）
-// ============================================
-const MOCK_VIDEOS: Video[] = [
-  {
-    id: '1',
-    videoUrl: '/vid.mp4',
-    thumbnailUrl: '/vid.mp4',
-    title: '精彩视频 #1',
-    description: '这是第一个测试视频，展示了精彩的内容 #测试 #短视频',
-    author: {
-      id: 'user1',
-      username: '创作者一号',
-      avatarUrl: undefined,
-      isFollowing: false,
-    },
-    stats: {
-      likes: 1234,
-      comments: 345,
-      shares: 89,
-      views: 12000,
-    },
-    isLiked: false,
-    isBookmarked: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    videoUrl: '/vid.mp4',
-    thumbnailUrl: '/vid.mp4',
-    title: '精彩视频 #2',
-    description: '这是第二个测试视频 #娱乐 #搞笑',
-    author: {
-      id: 'user2',
-      username: '创作者二号',
-      avatarUrl: undefined,
-      isFollowing: false,
-    },
-    stats: {
-      likes: 5678,
-      comments: 890,
-      shares: 234,
-      views: 45000,
-    },
-    isLiked: false,
-    isBookmarked: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    videoUrl: '/vid.mp4',
-    thumbnailUrl: '/vid.mp4',
-    title: '精彩视频 #3',
-    description: '这是第三个测试视频，内容丰富多彩 #生活 #记录',
-    author: {
-      id: 'user3',
-      username: '创作者三号',
-      avatarUrl: undefined,
-      isFollowing: true,
-    },
-    stats: {
-      likes: 9012,
-      comments: 1234,
-      shares: 456,
-      views: 78000,
-    },
-    isLiked: true,
-    isBookmarked: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    videoUrl: '/vid.mp4',
-    thumbnailUrl: '/vid.mp4',
-    title: '精彩视频 #4',
-    description: '第四个视频来啦 #美食 #分享',
-    author: {
-      id: 'user4',
-      username: '创作者四号',
-      avatarUrl: undefined,
-      isFollowing: false,
-    },
-    stats: {
-      likes: 3456,
-      comments: 567,
-      shares: 123,
-      views: 23000,
-    },
-    isLiked: false,
-    isBookmarked: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    videoUrl: '/vid.mp4',
-    thumbnailUrl: '/vid.mp4',
-    title: '精彩视频 #5',
-    description: '最后一个测试视频 #旅行 #风景',
-    author: {
-      id: 'user5',
-      username: '创作者五号',
-      avatarUrl: undefined,
-      isFollowing: false,
-    },
-    stats: {
-      likes: 7890,
-      comments: 901,
-      shares: 345,
-      views: 56000,
-    },
-    isLiked: false,
-    isBookmarked: false,
-    createdAt: new Date().toISOString(),
-  },
-];
+// OpenAPI paths already include `/api` prefix.
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 // ============================================
-// API 函数
+// OpenAPI 兼容的数据结构（最小定义）
 // ============================================
 
-/**
- * 获取视频列表（Feed 流）
- * @param cursor - 分页游标
- * @param limit - 每页数量
- * @returns 视频列表响应
- *
- * TODO: 对接后端 API
- * 后端接口: GET /videos/feed?cursor={cursor}&limit={limit}
- */
-export async function getVideoFeed(
-  cursor?: string,
-  limit: number = 10
-): Promise<VideoListResponse> {
-  // TODO: 替换为真实 API 调用
-  // const response = await fetch(`${API_BASE_URL}/videos/feed?cursor=${cursor || ''}&limit=${limit}`);
-  // const data = await response.json();
-  // return data;
+type ApiEnvelope<T> = {
+  code: number;
+  msg?: string;
+  data?: T;
+};
 
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
+type OpenApiVideoListItem = {
+  videoId: number;
+  title: string;
+  playCount?: number;
+  likeCount?: number;
+};
 
-  // 返回假数据
+function joinUrl(baseUrl: string, path: string) {
+  const b = baseUrl.replace(/\/+$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${b}${p}`;
+}
+
+async function requestOpenApi<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const url = joinUrl(API_BASE_URL, path);
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+
+  const text = await res.text();
+  const parsed: unknown = text ? JSON.parse(text) : null;
+
+  if (!res.ok) {
+    const msg =
+      parsed &&
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "msg" in parsed &&
+      typeof (parsed as { msg?: unknown }).msg === "string"
+        ? (parsed as { msg: string }).msg
+        : res.statusText || "Request failed";
+    throw new Error(msg);
+  }
+
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    parsed !== null &&
+    "code" in parsed
+  ) {
+    const env = parsed as ApiEnvelope<T>;
+    if (env.code !== 200) throw new Error(env.msg || "API error");
+    return (env.data as T) ?? (undefined as T);
+  }
+
+  return parsed as T;
+}
+
+function mapOpenApiVideoListItemToVideo(item: OpenApiVideoListItem): Video {
+  // frontend 的 Video 类型与后端 VO 不一致（当前 types/video.ts 是 UI 模型）。
+  // 这里做一个“尽量合理”的映射：保证 use-video-feed.ts 能跑起来。
+  const id = String(item.videoId);
+
   return {
-    videos: MOCK_VIDEOS,
-    nextCursor: undefined,
-    hasMore: false,
+    id,
+    videoUrl: "/vid.mp4",
+    thumbnailUrl: "/vid.mp4",
+    title: item.title ?? `视频 ${id}`,
+    description: "",
+    author: {
+      id: "unknown",
+      username: "unknown",
+      avatarUrl: undefined,
+      isFollowing: false,
+    },
+    stats: {
+      likes: item.likeCount ?? 0,
+      comments: 0,
+      shares: 0,
+      views: item.playCount ?? 0,
+    },
+    isLiked: false,
+    isBookmarked: false,
+    createdAt: new Date().toISOString(),
   };
 }
 
-/**
- * 点赞/取消点赞视频
- * @param request - 点赞请求
- *
- * TODO: 对接后端 API
- * 后端接口: POST /videos/{videoId}/like
- * Request Body: { isLiked: boolean }
- */
-export async function toggleLikeVideo(request: LikeVideoRequest): Promise<void> {
-  // TODO: 替换为真实 API 调用
-  // const response = await fetch(`${API_BASE_URL}/videos/${request.videoId}/like`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ isLiked: request.isLiked }),
-  // });
-  // if (!response.ok) throw new Error('Failed to toggle like');
+// ============================================
+// OpenAPI 对齐：视频列表（用来驱动 feed）
+// - GET /api/api/video/list?videoQueryDTO.page=1&videoQueryDTO.size=10
+// ============================================
 
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 300));
-  console.log('Toggle like:', request);
+export async function getVideoFeed(
+  cursor?: string,
+  limit: number = 10,
+): Promise<VideoListResponse> {
+  // OpenAPI 并没有 cursor 分页；这里用 page/size 做适配。
+  // cursor 为空 => page=1；cursor=数字字符串 => page=Number(cursor)
+  const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
+
+  const params = new URLSearchParams({
+    "videoQueryDTO.page": String(page),
+    "videoQueryDTO.size": String(limit),
+  });
+
+  const data = await requestOpenApi<OpenApiVideoListItem[]>(
+    `/api/api/video/list?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(data) ? data : [];
+  const videos = items.map(mapOpenApiVideoListItemToVideo);
+
+  return {
+    videos,
+    nextCursor: items.length === limit ? String(page + 1) : undefined,
+    hasMore: items.length === limit,
+  };
 }
 
-/**
- * 收藏/取消收藏视频
- * @param request - 收藏请求
- *
- * TODO: 对接后端 API
- * 后端接口: POST /videos/{videoId}/bookmark
- * Request Body: { isBookmarked: boolean }
- */
-export async function toggleBookmarkVideo(request: BookmarkVideoRequest): Promise<void> {
-  // TODO: 替换为真实 API 调用
-  // const response = await fetch(`${API_BASE_URL}/videos/${request.videoId}/bookmark`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ isBookmarked: request.isBookmarked }),
-  // });
-  // if (!response.ok) throw new Error('Failed to toggle bookmark');
+// ============================================
+// OpenAPI 对齐：播放行为
+// - POST /api/api/video/play  body: { videoId: number(int32) }
+// ============================================
 
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 300));
-  console.log('Toggle bookmark:', request);
-}
-
-/**
- * 关注/取消关注用户
- * @param request - 关注请求
- *
- * TODO: 对接后端 API
- * 后端接口: POST /users/{userId}/follow
- * Request Body: { isFollowing: boolean }
- */
-export async function toggleFollowUser(request: FollowUserRequest): Promise<void> {
-  // TODO: 替换为真实 API 调用
-  // const response = await fetch(`${API_BASE_URL}/users/${request.userId}/follow`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ isFollowing: request.isFollowing }),
-  // });
-  // if (!response.ok) throw new Error('Failed to toggle follow');
-
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 300));
-  console.log('Toggle follow:', request);
-}
-
-/**
- * 分享视频
- * @param videoId - 视频 ID
- *
- * TODO: 对接后端 API（如果需要记录分享统计）
- * 后端接口: POST /videos/{videoId}/share
- */
-export async function shareVideo(videoId: string): Promise<void> {
-  // TODO: 替换为真实 API 调用
-  // const response = await fetch(`${API_BASE_URL}/videos/${videoId}/share`, {
-  //   method: 'POST',
-  // });
-  // if (!response.ok) throw new Error('Failed to share video');
-
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 300));
-  console.log('Share video:', videoId);
-}
-
-/**
- * 增加视频播放次数
- * @param videoId - 视频 ID
- *
- * TODO: 对接后端 API
- * 后端接口: POST /videos/{videoId}/view
- */
 export async function incrementVideoView(videoId: string): Promise<void> {
-  // TODO: 替换为真实 API 调用
-  // const response = await fetch(`${API_BASE_URL}/videos/${videoId}/view`, {
-  //   method: 'POST',
-  // });
-  // if (!response.ok) throw new Error('Failed to increment view');
+  const videoIdNum = Number(videoId);
+  if (!Number.isFinite(videoIdNum)) return;
 
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 100));
-  console.log('Increment view:', videoId);
+  await requestOpenApi<void>("/api/api/video/play", {
+    method: "POST",
+    body: JSON.stringify({ videoId: videoIdNum }),
+  });
+}
+
+// ============================================
+// OpenAPI 对齐：用户行为
+// - POST /api/behavior/like    body: { videoId: number(int64) }
+// - POST /api/behavior/share   body: { videoId: number(int64) }
+// - POST /api/behavior/comment body: { videoId: number(int64), content: string }
+// ============================================
+
+export async function toggleLikeVideo(
+  request: LikeVideoRequest,
+): Promise<void> {
+  const videoIdNum = Number(request.videoId);
+  if (!Number.isFinite(videoIdNum)) return;
+
+  // OpenAPI 没有 isLiked 的开关语义；该接口名是“点赞视频”。
+  // 这里采用：isLiked=true 才发请求；false 不调用（当作“取消点赞”后端暂不支持）。
+  if (!request.isLiked) return;
+
+  await requestOpenApi<void>("/api/behavior/like", {
+    method: "POST",
+    body: JSON.stringify({ videoId: videoIdNum }),
+  });
+}
+
+export async function shareVideo(videoId: string): Promise<void> {
+  const videoIdNum = Number(videoId);
+  if (!Number.isFinite(videoIdNum)) return;
+
+  await requestOpenApi<void>("/api/behavior/share", {
+    method: "POST",
+    body: JSON.stringify({ videoId: videoIdNum }),
+  });
+}
+
+/**
+ * 发表评论
+ * OpenAPI: POST /api/behavior/comment  body: { videoId: int64, content: string }
+ */
+export async function createComment(
+  videoId: string,
+  content: string,
+): Promise<void> {
+  const videoIdNum = Number(videoId);
+  if (!Number.isFinite(videoIdNum)) return;
+
+  await requestOpenApi<void>("/api/behavior/comment", {
+    method: "POST",
+    body: JSON.stringify({ videoId: videoIdNum, content }),
+  });
+}
+
+// ============================================
+// 未在 OpenAPI 中定义的能力：先保留为 no-op
+// （避免 hooks/use-video-feed.ts 直接报错）
+// ============================================
+
+export async function toggleBookmarkVideo(
+  _request: BookmarkVideoRequest,
+): Promise<void> {
+  // OpenAPI 未提供 bookmark/收藏相关接口
+  void _request;
+  return;
+}
+
+export async function toggleFollowUser(
+  _request: FollowUserRequest,
+): Promise<void> {
+  // OpenAPI 未提供 follow/关注相关接口
+  void _request;
+  return;
 }
