@@ -38,7 +38,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         try {
             url= aliyunOSSOperator.upload(videoUploadDTO.getFile().getBytes(),videoUploadDTO.getFile().getOriginalFilename());
         } catch (Exception e) {
-            throw new RuntimeException("上传视频失败");
+            e.printStackTrace();
+            throw new RuntimeException("上传视频失败", e);
         }
 
         //将视频元数据保存到数据库
