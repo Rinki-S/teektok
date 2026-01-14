@@ -2,15 +2,17 @@
  * Admin API service (backend-web)
  * --------------------------------------------
  * This file implements client-side service functions that match the
- * documented admin endpoints in `docs/md/接口文档.md`.
+ * OpenAPI document at: http://localhost:8080/v3/api-docs
  *
- * Base URL: NEXT_PUBLIC_API_BASE_URL (default http://localhost:8080/api)
- * Envelope: { code: number, msg: string, data?: any } with code === 200 success
+ * IMPORTANT (OpenAPI contract):
+ * - Paths are prefixed with `/api`, e.g. POST /api/admin/login
+ * - Some endpoints use query parameters instead of JSON body:
+ *   - POST /api/admin/user/status?userId=...&status=...
+ *   - POST /api/admin/video/hot?videoId=...&hot=...
  *
- * NOTE:
- * - Backend is not implemented yet; keep these functions aligned with docs.
- * - Some admin endpoints have ambiguous request/response details in the docs;
- *   types are tolerant (optional fields or optional body).
+ * Base URL:
+ * - NEXT_PUBLIC_API_BASE_URL should be the server root, e.g. http://localhost:8080
+ * - This file sends absolute *path* starting with `/api/...`
  * ============================================ */
 
 import { apiClient } from "@/services/apiClient";
@@ -27,38 +29,22 @@ import type {
 } from "@/types/api";
 
 export const ADMIN_ENDPOINTS = {
-  login: "/admin/login",
-  userStatus: "/admin/user/status",
-  videoAudit: "/admin/video/audit",
-  videoHot: "/admin/video/hot",
-  videoDelete: (videoId: number) => `/admin/video/delete/${videoId}`,
+  login: "/api/admin/login",
+  userStatus: "/api/admin/user/status",
+  videoAudit: "/api/admin/video/audit",
+  videoHot: "/api/admin/video/hot",
+  videoDelete: (videoId: number) => `/api/admin/video/delete/${videoId}`,
 } as const;
 
 /**
  * Admin login
- * POST /admin/login
- *
- * Docs don't show request/response explicitly, but following user/login format:
- * Request: { username, password }
- * Response: ApiResponse<{ adminId?: number; token?: string }>
+ * OpenAPI: POST /api/admin/login (JSON body)
  */
 export async function adminLogin(
   payload: AdminLoginRequest,
 ): Promise<AdminLoginResponse> {
-  // return full envelope by asking apiClient for unknown and assuming envelope
-  // However, our apiClient returns `data` by default (strictEnvelope=true).
-  // So we call request with the raw fetch? Not available here.
-  //
-  // Instead: use apiClient.request with strict envelope returning `data`,
-  // then reconstruct envelope shape. But we don't have `code/msg`.
-  //
-  // Pragmatic approach for this project:
-  // - For most UI flows we only need `data` (token/adminId).
-  // - Provide a companion `adminLoginData` returning `data` only.
-  //
-  // Still, keep a function with the requested return type by doing a direct fetch.
   const baseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
   const url = `${baseUrl.replace(/\/+$/, "")}${ADMIN_ENDPOINTS.login}`;
 
   const res = await fetch(url, {
@@ -96,21 +82,29 @@ export async function adminLoginData(payload: AdminLoginRequest): Promise<{
 
 /**
  * Freeze/unfreeze user
- * POST /admin/user/status
- * Body: { userId: number, status: 0|1 }  (0 frozen, 1 normal)
+ * OpenAPI: POST /api/admin/user/status (query parameters)
+ * - userId: int64
+ * - status: int32
  */
 export async function setUserStatus(
   payload: AdminUserStatusRequest,
 ): Promise<AdminUserStatusResponse> {
-  // data-less endpoint: apiClient returns `undefined` on success
-  await apiClient.post<unknown>(ADMIN_ENDPOINTS.userStatus, payload);
+  const params = new URLSearchParams({
+    userId: String(payload.userId),
+    status: String(payload.status),
+  });
+
+  // OpenAPI specifies query params; no JSON body is required.
+  await apiClient.post<unknown>(
+    `${ADMIN_ENDPOINTS.userStatus}?${params.toString()}`,
+  );
+
   return { code: 200, msg: "success" };
 }
 
 /**
  * Audit video (approve/reject)
- * POST /admin/video/audit
- * Body: { videoId: number, status: 1|0 } (1 pass, 0 reject)
+ * OpenAPI: POST /api/admin/video/audit (JSON body)
  */
 export async function auditVideo(
   payload: AdminVideoAuditRequest,
@@ -120,21 +114,31 @@ export async function auditVideo(
 }
 
 /**
- * Set hot video flag
- * POST /admin/video/hot
- * Docs do not specify request body; we accept a flexible payload:
- * - { videoId, isHot?: 0|1 }
+ * Set/Unset hot video
+ * OpenAPI: POST /api/admin/video/hot (query parameters)
+ * - videoId: int64
+ * - hot: boolean
+ *
+ * Note: our UI types carry `isHot?: 0|1`. We map to boolean `hot`.
  */
 export async function setVideoHot(
   payload: AdminVideoHotRequest,
 ): Promise<AdminVideoHotResponse> {
-  await apiClient.post<unknown>(ADMIN_ENDPOINTS.videoHot, payload);
+  const params = new URLSearchParams({
+    videoId: String(payload.videoId),
+    hot: String(payload.isHot ? payload.isHot === 1 : true),
+  });
+
+  await apiClient.post<unknown>(
+    `${ADMIN_ENDPOINTS.videoHot}?${params.toString()}`,
+  );
+
   return { code: 200, msg: "success" };
 }
 
 /**
  * Delete video (admin)
- * DELETE /admin/video/delete/{videoId}
+ * OpenAPI: DELETE /api/admin/video/delete/{videoId}
  */
 export async function deleteVideo(
   videoId: number,

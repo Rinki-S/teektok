@@ -8,11 +8,11 @@
  *   { "code": 200, "msg": "success", "data": {} }
  *
  * Admin endpoints used here:
- * - POST   /admin/video/audit         (approve/reject)
- * - POST   /admin/video/hot           (set hot flag)
- * - DELETE /admin/video/delete/{id}   (delete video)
- * - GET    /video/list               (list videos; pagination)
- * - GET    /analysis/video            (video behavior stats)
+ * - POST   /api/admin/video/audit         (approve/reject)
+ * - POST   /api/admin/video/hot           (set hot flag)  [query params: videoId, hot]
+ * - DELETE /api/admin/video/delete/{id}   (delete video)
+ * - GET    /api/api/video/list            (list videos; pagination) [query: videoQueryDTO.*]
+ * - GET    /api/analysis/video            (video behavior stats)
  */
 
 import { apiClient } from "@/services/apiClient";
@@ -30,58 +30,73 @@ export type VideoListQuery = {
 };
 
 /**
- * GET /video/list?page={page}&size={size}
+ * GET /api/api/video/list
+ *
+ * OpenAPI shows a single query parameter named `videoQueryDTO` (object with page/size).
+ * For typical Spring binding, this usually maps to:
+ *   videoQueryDTO.page=1&videoQueryDTO.size=10
  *
  * Docs example returns:
  * { code: 200, data: [ { videoId, title, playCount } ] }
  */
-export async function getVideoList(query: VideoListQuery): Promise<VideoListItem[]> {
+export async function getVideoList(
+  query: VideoListQuery,
+): Promise<VideoListItem[]> {
   const params = new URLSearchParams({
-    page: String(query.page),
-    size: String(query.size),
+    "videoQueryDTO.page": String(query.page),
+    "videoQueryDTO.size": String(query.size),
   });
 
   // apiClient returns the `data` portion of the envelope.
-  // If backend eventually returns pagination metadata, you can adapt this type.
-  return apiClient.get<VideoListItem[]>(`/video/list?${params.toString()}`);
+  return apiClient.get<VideoListItem[]>(
+    `/api/api/video/list?${params.toString()}`,
+  );
 }
 
 /**
- * POST /admin/video/audit
- * Body: { videoId: number, status: 1 | 0 }
- * status: 1 pass, 0 reject
+ * POST /api/admin/video/audit
+ * Body (OpenAPI): VideoAuditDTO
  */
 export async function auditVideo(input: AdminVideoAuditRequest): Promise<void> {
-  await apiClient.post<void>("/admin/video/audit", input);
+  await apiClient.post<void>("/api/admin/video/audit", input);
 }
 
 /**
- * POST /admin/video/hot
+ * POST /api/admin/video/hot
  *
- * Docs do not specify request body.
- * We send { videoId, isHot? } (see `types/api.ts`).
- * If backend expects only { videoId }, it should ignore unknown fields or you can
- * switch to `{ videoId }` from the caller.
+ * OpenAPI defines query params:
+ * - videoId: int64
+ * - hot: boolean
+ *
+ * Note: `AdminVideoHotRequest` currently uses `isHot?: 0 | 1`.
+ * We map `isHot` -> boolean `hot` (1 => true, 0 => false).
  */
 export async function setVideoHot(input: AdminVideoHotRequest): Promise<void> {
-  await apiClient.post<void>("/admin/video/hot", input);
+  const params = new URLSearchParams({
+    videoId: String(input.videoId),
+    hot: String(input.isHot ? input.isHot === 1 : true),
+  });
+
+  await apiClient.post<void>(`/api/admin/video/hot?${params.toString()}`);
 }
 
 /**
- * DELETE /admin/video/delete/{videoId}
+ * DELETE /api/admin/video/delete/{videoId}
  */
-export async function deleteVideo(params: AdminVideoDeleteParams): Promise<void> {
-  await apiClient.delete<void>(`/admin/video/delete/${params.videoId}`);
+export async function deleteVideo(
+  params: AdminVideoDeleteParams,
+): Promise<void> {
+  await apiClient.delete<void>(`/api/admin/video/delete/${params.videoId}`);
 }
 
 /**
- * GET /analysis/video
+ * GET /api/analysis/video
  *
- * Docs example:
+ * OpenAPI:
  * { code: 200, data: { playCount, likeCount, commentCount } }
  */
 export async function getVideoAnalysis(): Promise<VideoAnalysisData> {
-  return apiClient.get<VideoAnalysisData>("/analysis/video");
+  return apiClient.get<VideoAnalysisData>("/api/analysis/video");
 }
 
 /**
@@ -100,6 +115,9 @@ export async function rejectVideo(videoId: number): Promise<void> {
  * Toggle hot with explicit flag.
  * Note: `isHot` type is `0 | 1` in `types/api.ts`.
  */
-export async function markVideoHot(videoId: number, isHot: 0 | 1): Promise<void> {
+export async function markVideoHot(
+  videoId: number,
+  isHot: 0 | 1,
+): Promise<void> {
   await setVideoHot({ videoId, isHot });
 }

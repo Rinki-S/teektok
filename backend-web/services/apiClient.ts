@@ -1,6 +1,6 @@
 /* ============================================
  * Minimal API client wrapper
- * - Base URL via NEXT_PUBLIC_API_BASE_URL (defaults to http://localhost:8080/api)
+ * - Base URL via NEXT_PUBLIC_API_BASE_URL (defaults to http://localhost:8080)
  * - Optional auth header injection (Bearer token)
  * - Consistent JSON parsing and API envelope typing
  * ============================================
@@ -117,7 +117,9 @@ export class ApiClient {
         ? process.env.NEXT_PUBLIC_API_BASE_URL
         : undefined;
 
-    this.baseUrl = options.baseUrl ?? envBase ?? "http://localhost:8080/api";
+    // OpenAPI paths already include the `/api` prefix (e.g. `/api/admin/login`),
+    // so the base URL should NOT include `/api` to avoid double-prefixing.
+    this.baseUrl = options.baseUrl ?? envBase ?? "http://localhost:8080";
     this.tokenProvider = options.tokenProvider;
     this.strictEnvelope = options.strictEnvelope ?? true;
   }
