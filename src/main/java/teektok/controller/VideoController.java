@@ -1,11 +1,10 @@
 package teektok.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import teektok.VO.PageResult;
 import teektok.dto.behavior.PlayDTO;
 import teektok.dto.commen.Result;
@@ -13,13 +12,17 @@ import teektok.dto.video.VideoQueryDTO;
 import teektok.dto.video.VideoUploadDTO;
 import teektok.dto.video.VideoVO;
 import teektok.service.IVideoService;
+import teektok.utils.AliyunOSSOperator;
 
 
 @RestController
-@RequestMapping("/api/api/video")
+@RequestMapping("/api/video")
 @Tag(name = "视频模块")
 public class VideoController {
     private final IVideoService videoService;
+
+    @Autowired
+    private AliyunOSSOperator ossOperator;
 
     public VideoController(IVideoService videoService) {
         this.videoService = videoService;
@@ -28,8 +31,9 @@ public class VideoController {
     // ==================== 上传视频 ====================
     @Operation(summary = "上传视频")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Result<Void> upload(@ModelAttribute VideoUploadDTO dto) { // 使用 @ModelAttribute 或直接对象接收
-        videoService.upload(dto);
+    public Result<String> upload(@ModelAttribute VideoUploadDTO dto) throws Exception { // 使用 @ModelAttribute 或直接对象接收
+        Long uploaderId = 1L;
+        videoService.upload(dto,uploaderId);
         return Result.success();
     }
 

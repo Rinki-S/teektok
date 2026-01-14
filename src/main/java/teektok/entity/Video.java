@@ -1,8 +1,6 @@
 package teektok.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,17 +14,46 @@ public class Video {
 
     private String title;
 
-    private String url;
+    private String videoUrl;
 
     private String coverUrl;
 
-    private Long userId;
+    private String description;
 
-    private Long playCount;
+    private Long uploaderId;
 
-    private Long likeCount;
+/*    private Long playCount;
 
+    private Long likeCount;*/
+
+    /**
+     * 审核状态：0待审核 1审核通过 2审核不通过
+     */
     private Integer status;
 
+    /**
+     * 是否热门：0否 1是
+     */
+    private Integer isHot;
+
+    /**
+     * 逻辑删除：0未删除 1已删除
+     * 加了 @TableLogic 后，调用 deleteById 会自动变成 update is_deleted=1
+     */
+    @TableLogic
+    private Integer isDeleted;
+
+    /**
+     * 创建时间
+     * fill = FieldFill.INSERT 表示插入时自动填充
+     */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     * fill = FieldFill.INSERT_UPDATE 表示插入和更新时自动填充
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 }

@@ -17,3 +17,11 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     # 开启下划线转驼峰命名 (默认为 true，显式写出来更清晰)
     map-underscore-to-camel-case: true
+
+
+#配置阿里云
+aliyun:
+  oss:
+    endpoint: https://oss-cn-beijing.aliyuncs.com
+    bucketName: teektok
+    region: cn-beijing
