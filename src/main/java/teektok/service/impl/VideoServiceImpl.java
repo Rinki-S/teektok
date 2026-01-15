@@ -18,6 +18,7 @@ import teektok.service.IVideoService;
 import teektok.utils.AliyunOSSOperator;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -41,13 +42,20 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
             throw new RuntimeException("上传视频失败");
         }
 
+        //获取视频封面的url
+        String coverUrl=url+"?x-oss-process=video/snapshot,t_1000,f_jpg,w_0,h_0,m_fast";
+
         //将视频元数据保存到数据库
         Video video=new Video();
         video.setTitle(videoUploadDTO.getTitle());
-        video.setDescription(videoUploadDTO.getDescription());
         video.setVideoUrl(url);
-        video.setStatus(0);
+        video.setCoverUrl(coverUrl);
+        video.setDescription(videoUploadDTO.getDescription());
         video.setUploaderId(uploaderId);
+        video.setStatus(0);
+        video.setCreateTime(LocalDateTime.now());
+        video.setUpdateTime(LocalDateTime.now());
+
         this.save(video);
     }
 
