@@ -1,6 +1,7 @@
 package teektok.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,12 +9,19 @@ import org.springframework.stereotype.Service;
 import teektok.dto.audit.AdminLoginDTO;
 import teektok.dto.audit.AdminLoginVO;
 import teektok.dto.audit.VideoAuditDTO;
+import teektok.dto.commen.ResultCode;
 import teektok.entity.Admin;
 import teektok.entity.User;
+import teektok.entity.Video;
 import teektok.mapper.AdminMapper;
 import teektok.mapper.UserMapper;
 import teektok.mapper.VideoMapper;
+import teektok.mapper.VideoStatMapper;
 import teektok.service.IAdminService;
+import teektok.utils.JwtUtils;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -23,58 +31,91 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
     @Autowired
     private VideoMapper videoMapper; // 需要操作视频表
-    
+
+    @Autowired
+    private VideoStatMapper videoStatMapper; // 需要操作视频统计数据表
+
     @Override
     public AdminLoginVO login(AdminLoginDTO dto) {
-        // 1. 查用户
+        // 1. 查管理员用户
         Admin admin = this.getOne(new LambdaQueryWrapper<Admin>()
                 .eq(Admin::getUsername, dto.getUsername()));
 
-        // 2. 校验是否存在
         if (admin == null) {
-            throw new RuntimeException("管理员不存在");
+            throw new RuntimeException("管理员不存在"); // 管理员不存在
         }
 
-        // 3. 校验密码 (TODO: 后续接入 BCryptPasswordEncoder)
+        // 2. 校验密码 (明文比对，生产环境建议用 BCrypt)
         if (!admin.getPassword().equals(dto.getPassword())) {
-            throw new RuntimeException("密码错误");
+            throw new RuntimeException("密码错误"); // 密码错误
         }
 
-        // 4. 生成 Token (模拟)
-        String token = "admin-token-" + admin.getId();
+        // 3. 生成 Token
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id", admin.getId());
+        claims.put("role", "admin");
+        String token = JwtUtils.createToken(claims);
 
-        // 5. 封装返回
+        // 4. 返回
         AdminLoginVO vo = new AdminLoginVO();
         vo.setToken(token);
-        // 如果 VO 里有 username 或 avatar 也可以在这里 set
         return vo;
     }
 
     @Override
     public void ChangeUserStatus(Long userId, Integer status) {
-        // 逻辑：直接更新 User 表的 status 字段
-        User user = new User();
-        user.setId(userId);
-        user.setStatus(status);
-
-        int rows = userMapper.updateById(user);
-        if (rows == 0) {
-            throw new RuntimeException("用户不存在或更新失败");
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
         }
+
+        user.setStatus(status);
+        userMapper.updateById(user);
     }
 
     @Override
     public void auditVideo(VideoAuditDTO dto) {
+        Video video = videoMapper.selectById(dto.getVideoId());
+        if (video == null) {
+            throw new RuntimeException("视频不存在");
+        }
 
+        video.setStatus(dto.getStatus());
+
+        videoMapper.updateById(video);
     }
 
     @Override
     public void setHotVideo(Long videoId, Boolean hot) {
+        Video video = videoMapper.selectById(videoId);
+        if (video == null) {
+            throw new RuntimeException("视频不存在");
+        }
 
+        // 使用 UpdateWrapper 只更新 is_hot 字段，效率更高
+        LambdaUpdateWrapper<Video> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Video::getId, videoId)
+                .set(Video::getIsHot, hot ? 1 : 0);
+
+        videoMapper.update(null, updateWrapper);
     }
 
     @Override
     public void deleteVideo(Long videoId) {
+        // 1. 检查视频是否存在
+        Video video = videoMapper.selectById(videoId);
+        if (video == null) {
+            throw new RuntimeException("视频不存在");
+        }
 
+        // 2. 删除视频主表数据
+        videoMapper.deleteById(videoId);
+
+        // 3. 删除视频统计表数据 (VideoStat)
+        videoStatMapper.deleteById(videoId);
+
+        // TODO: 后续可以继续在这里删除 user_behavior 表中关于该视频的记录
+        // userBehaviorMapper.delete(new LambdaQueryWrapper<UserBehavior>().eq(UserBehavior::getVideoId, videoId));
     }
 }
+
