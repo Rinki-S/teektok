@@ -2,11 +2,9 @@ package teektok.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.kafka.common.serialization.VoidDeserializer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import teektok.dto.behavior.BehaviorDTO;
 import teektok.dto.behavior.ShareDTO;
 import teektok.dto.commen.Result;
@@ -29,10 +27,26 @@ public class BehaviorController {
         return 1L;
     }
 
+    @Operation(summary = "播放视频")
+    @PostMapping("/like")
+    public Result<Void> play(
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
+        behaviorService.play(videoId, userId);
+        return Result.success();
+    }
+
     @Operation(summary = "点赞视频")
     @PostMapping("/like")
     public Result<Void> like(@RequestBody BehaviorDTO dto) {
         behaviorService.like(dto.getVideoId(), getCurrentUserId());
+        return Result.success();
+    }
+
+    public Result<Void> unlike(
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
+        behaviorService.unlike(videoId, userId);
         return Result.success();
     }
 
