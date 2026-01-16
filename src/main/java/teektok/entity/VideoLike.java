@@ -8,18 +8,11 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("comment")
-public class Comment {
+@TableName("video_like")
+public class VideoLike {
     @TableId(type = IdType.AUTO)
     private Long id;
-
     private Long videoId;
-
     private Long userId;
-
-    private String content;
-
-    private Integer status;
-
     private LocalDateTime createTime;
 }

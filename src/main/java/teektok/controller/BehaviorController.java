@@ -30,24 +30,26 @@ public class BehaviorController {
     @Operation(summary = "播放视频")
     @PostMapping("/play")
     public Result<Void> play(
-        @RequestParam("videoId") Long videoId,
-        @RequestParam("userId") Long userId
-    ) {
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
         behaviorService.play(videoId, userId);
         return Result.success();
     }
 
     @Operation(summary = "点赞视频")
     @PostMapping("/like")
-    public Result<Void> like(@RequestBody BehaviorDTO dto) {
-        behaviorService.like(dto.getVideoId(), getCurrentUserId());
+    public Result<Void> like(
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
+        behaviorService.like(videoId, userId);
         return Result.success();
     }
 
+    @Operation(summary = "取消点赞视频")
+    @PostMapping("/unlike")
     public Result<Void> unlike(
-        @RequestParam("videoId") Long videoId,
-        @RequestParam("userId") Long userId
-    ) {
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
         behaviorService.unlike(videoId, userId);
         return Result.success();
     }
@@ -61,8 +63,28 @@ public class BehaviorController {
 
     @Operation(summary = "转发视频")
     @PostMapping("/share")
-    public Result<Void> share(@RequestBody ShareDTO dto) {
-        behaviorService.share(dto.getVideoId(), getCurrentUserId());
+    public Result<Void> share(
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
+        behaviorService.share(videoId, userId);
+        return Result.success();
+    }
+
+    @Operation(summary = "收藏视频")
+    @PostMapping("/favorite")
+    public Result<Void> favorite(
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
+        behaviorService.favorite(videoId, userId);
+        return Result.success();
+    }
+
+    @Operation(summary = "取消收藏视频")
+    @PostMapping("/unfavorite")
+    public Result<Void> unfavorite(
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("userId") Long userId) {
+        behaviorService.unfavorite(videoId, userId);
         return Result.success();
     }
 }
