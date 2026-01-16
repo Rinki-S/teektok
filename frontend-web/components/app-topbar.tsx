@@ -16,6 +16,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -41,6 +49,14 @@ export function AppTopbar() {
   const [smsCode, setSmsCode] = React.useState("");
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleLogout = React.useCallback(() => {
+    setAuthUser(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+    router.push("/");
+  }, [router]);
 
   const phoneId = React.useId();
   const smsCodeId = React.useId();
@@ -76,18 +92,34 @@ export function AppTopbar() {
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogTrigger asChild>
           {authUser ? (
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-full transition-transform hover:scale-105"
-              aria-label="已登录"
-            >
-              <Avatar size="lg">
-                <AvatarImage src="" alt={authUser.username} />
-                <AvatarFallback>
-                  {authUser.username.slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full transition-transform hover:scale-105"
+                  aria-label="已登录"
+                >
+                  <Avatar size="lg">
+                    <AvatarImage src="" alt={authUser.username} />
+                    <AvatarFallback>
+                      {authUser.username.slice(0, 1).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>账号</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/me")}>
+                  我的
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/me")}>设置</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                  退出登录
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button className="h-full px-4 rounded-xl">
               <CircleUserRound size={16} strokeWidth={3} />
