@@ -7,5 +7,5 @@ import lombok.Data;
 @Schema(description = "视频播放请求")
 public class PlayDTO {
     @Schema(description = "视频ID", example = "1")
-    private Integer videoId;
+    private Long videoId;
 }

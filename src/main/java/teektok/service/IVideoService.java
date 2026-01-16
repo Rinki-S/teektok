@@ -24,8 +24,8 @@ public interface IVideoService {
 
     /*
      * 播放视频（记录播放行为）
-     * */
-    void play(PlayDTO playDTO);
+     * *//*
+    void play(PlayDTO playDTO);*/
 
     /**
      * 根据视频 ID 列表，获取推荐展示用的视频信息

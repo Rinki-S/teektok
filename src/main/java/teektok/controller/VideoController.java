@@ -48,10 +48,10 @@ public class VideoController {
 
     // ==================== 播放视频 ====================
 
-    @Operation(summary = "播放视频（记录播放行为）")
+/*    @Operation(summary = "播放视频（记录播放行为）")
     @PostMapping("/play")
     public Result<Void> play(@RequestBody PlayDTO dto) {
         videoService.play(dto);
         return Result.success();
-    }
+    }*/
 }

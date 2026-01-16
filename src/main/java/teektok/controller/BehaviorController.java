@@ -28,7 +28,7 @@ public class BehaviorController {
     }
 
     @Operation(summary = "播放视频")
-    @PostMapping("/like")
+    @PostMapping("/play")
     public Result<Void> play(
             @RequestParam("videoId") Long videoId,
             @RequestParam("userId") Long userId) {

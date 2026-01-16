@@ -1,10 +1,12 @@
 package teektok.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import teektok.VO.PageResult;
 import teektok.dto.behavior.PlayDTO;
 import teektok.dto.recommend.RecommendVideoVO;
@@ -12,12 +14,15 @@ import teektok.dto.video.VideoListVO;
 import teektok.dto.video.VideoQueryDTO;
 import teektok.dto.video.VideoUploadDTO;
 import teektok.dto.video.VideoVO;
+import teektok.entity.UserBehavior;
 import teektok.entity.Video;
 import teektok.entity.VideoStat;
+import teektok.mapper.UserBehaviorMapper;
 import teektok.mapper.VideoMapper;
 import teektok.mapper.VideoStatMapper;
 import teektok.service.IVideoService;
 import teektok.utils.AliyunOSSOperator;
+import teektok.utils.BaseContext;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -34,6 +39,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private AliyunOSSOperator aliyunOSSOperator;
     @Autowired
     private VideoStatMapper videoStatMapper;
+    @Autowired
+    private UserBehaviorMapper userBehaviorMapper;
 
     @Override
     public void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
@@ -124,10 +131,23 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         return vo;
     }
 
-    @Override
+    /*@Override
+    @Transactional
     public void play(PlayDTO playDTO) {
+        // 1. 记录用户播放行为
+        UserBehavior behavior = new UserBehavior();
+        behavior.setVideoId(playDTO.getVideoId());
+        behavior.setUserId(BaseContext.getCurrentId()); // 实际开发中应从上下文获取当前登录用户ID
+        behavior.setBehaviorType(1); // 假设 1 代表播放行为
+        behavior.setCreateTime(LocalDateTime.now());
+        userBehaviorMapper.insert(behavior);
 
-    }
+        // 2. 更新视频统计数据 (播放量 +1)
+        // 使用 MyBatis-Plus 的 update 语句直接在数据库层面 +1，避免并发竞争问题
+        videoStatMapper.update(null, new LambdaUpdateWrapper<VideoStat>()
+                .eq(VideoStat::getVideoId, playDTO.getVideoId())
+                .setSql("play_count = play_count + 1"));
+    }*/
 
     @Override
     public List<RecommendVideoVO> getVideoRecommendVOs(List<Long> videoIds) {
