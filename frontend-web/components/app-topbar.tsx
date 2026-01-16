@@ -81,7 +81,7 @@ export function AppTopbar() {
               className="inline-flex items-center justify-center rounded-full transition-transform hover:scale-105"
               aria-label="已登录"
             >
-              <Avatar size="sm">
+              <Avatar size="lg">
                 <AvatarImage src="" alt={authUser.username} />
                 <AvatarFallback>
                   {authUser.username.slice(0, 1).toUpperCase()}
