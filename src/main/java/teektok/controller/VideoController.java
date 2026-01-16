@@ -13,6 +13,7 @@ import teektok.dto.video.VideoUploadDTO;
 import teektok.dto.video.VideoVO;
 import teektok.service.IVideoService;
 import teektok.utils.AliyunOSSOperator;
+import teektok.utils.BaseContext;
 
 
 @RestController
@@ -32,8 +33,8 @@ public class VideoController {
     @Operation(summary = "上传视频")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<String> upload(@ModelAttribute VideoUploadDTO dto) throws Exception { // 使用 @ModelAttribute 或直接对象接收
-        Long uploaderId = 1L;
-        videoService.upload(dto,uploaderId);
+        Long userId = BaseContext.getCurrentId();
+        videoService.upload(dto, userId);
         return Result.success();
     }
 

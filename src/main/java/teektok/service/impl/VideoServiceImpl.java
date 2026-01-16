@@ -36,7 +36,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private VideoStatMapper videoStatMapper;
 
     @Override
-    public void upload(VideoUploadDTO videoUploadDTO, Long uploaderId) throws Exception {
+    public void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
         if (videoUploadDTO.getFile() == null || videoUploadDTO.getFile().isEmpty()) {
             throw new RuntimeException("上传视频不能为空");
         }
