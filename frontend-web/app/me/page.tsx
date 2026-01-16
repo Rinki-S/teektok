@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -41,8 +40,33 @@ export default function MePage() {
     }
   }, []);
 
-  const displayName = authUser?.username || "未登录";
-  const displayId = authUser?.userId ?? 0;
+  if (!authUser) {
+    return (
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center bg-sidebar px-6 text-center">
+        <h1 className="text-xl font-semibold">请先登录</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          登录后查看个人主页。
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          点击右上角登录按钮继续。
+        </p>
+        <button
+          type="button"
+          className="mt-6 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("teektok:open-login"));
+            }
+          }}
+        >
+          去登录
+        </button>
+      </div>
+    );
+  }
+
+  const displayName = authUser.username || "未登录";
+  const displayId = authUser.userId ?? 0;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 items-start justify-center overflow-hidden bg-sidebar px-6 py-8">
