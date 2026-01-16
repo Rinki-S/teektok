@@ -8,7 +8,11 @@ import lombok.Data;
 public class VideoVO {
     private Long videoId;
     private String title;
+    private String videoUrl;
     private String coverUrl;
     private Long playCount;
     private Long likeCount;
+    private Long commentCount;
+    private Long shareCount;
+    private Long favoriteCount;
 }
