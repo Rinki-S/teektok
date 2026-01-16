@@ -5,68 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1e7d8caa-d844-4ee5-8718-70b0f4b5ad46" name="Changes" comment="Add .idea directory to .gitignore">
-      <change afterPath="$PROJECT_DIR$/src/main/java/teektok/utils/JwtUtils.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/df64dfc8-f0d9-4d45-9aba-f1d7c655e810.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/df64dfc8-f0d9-4d45-9aba-f1d7c655e810.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/df64dfc8-f0d9-4d45-9aba-f1d7c655e810/storage_v2/_src_/schema/teektok.Gfttqg.meta" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/df64dfc8-f0d9-4d45-9aba-f1d7c655e810/storage_v2/_src_/schema/teektok.Gfttqg.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/dto/user/UserLoginVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/dto/user/UserLoginVO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/service/impl/UserServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/df64dfc8-f0d9-4d45-9aba-f1d7c655e810.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/df64dfc8-f0d9-4d45-9aba-f1d7c655e810/storage_v2/_src_/schema/book_sys.d4yBdw.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/df64dfc8-f0d9-4d45-9aba-f1d7c655e810/storage_v2/_src_/schema/teektok.Gfttqg.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/mybatisx/templates.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/uiDesigner.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/teektok/controller/BehaviorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/teektok/controller/BehaviorController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/application.yaml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/VO/PageResult.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/config/MybatisPlusConfig.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/controller/AdminController.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/controller/AnalysisController.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/controller/BehaviorController.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/controller/RecommendController.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/controller/UserController.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/controller/VideoController.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/analysis/VideoAnalysisVO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/audit/AdminLoginDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/audit/AdminLoginVO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/audit/UserStatusDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/audit/VideoAuditDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/audit/VideoHotDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/behavior/BehaviorDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/behavior/PlayDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/behavior/ShareDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/commen/Result.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/commen/ResultCode.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/comment/CommentCreateDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/recommend/PersonalRecommendDto.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/recommend/RecommendVideoVO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/user/UserLoginDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/user/UserLoginVO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/user/UserRegisterDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/video/VideoListVO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/video/VideoQueryDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/video/VideoUploadDTO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/dto/video/VideoVO.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/entity/Video.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/mapper/VideoMapper.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/BehaviorEventPublisher.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/IAdminService.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/IAnalysisService.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/IBehaviorService.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/IRecommendEngine.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/IRecommendService.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/IUserService.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/IVideoService.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/AdminServiceImpl.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/AnalysisServiceImpl.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/BehaviorServiceImpl.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/KafkaBehaviorEventPublisher.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/LogBehaviorEventPublisher.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/RecommendServiceImpl.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/SimpleRecommendEngine.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/UserServiceImpl.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/service/impl/VideoServiceImpl.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/teektok/teektokApplication.class" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,18 +39,22 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;serenade-11&quot;
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "history": [
+    {
+      "state": "OPEN"
+    }
+  ],
+  "lastFilter": {
+    "state": "OPEN"
   }
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Rinki-S/teektok.git&quot;,
-    &quot;accountId&quot;: &quot;f3288166-e050-4cc9-ae99-c2293e63727f&quot;
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Rinki-S/teektok.git",
+    "accountId": "d98a32a0-e6e6-4cae-9a3f-faa23d64229e"
   }
-}</component>
+}]]></component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
@@ -114,6 +73,10 @@
   <component name="MavenRunner">
     <option name="jreName" value="#JAVA_HOME" />
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="ProjectCodeStyleSettingsMigration">
     <option name="version" value="2" />
   </component>
@@ -128,39 +91,48 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Maven.teektok [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.teektok [compile].executor&quot;: &quot;Run&quot;,
-    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
-    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
-    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
-    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;Spring Boot.teektokApplication.executor&quot;: &quot;Debug&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/code base/hm-dianping&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.teektok [clean].executor": "Run",
+    "Maven.teektok [compile].executor": "Run",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "Spring Boot.teektokApplication.executor": "Run",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/rinki/Documents/Codes/teektok",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "SDK",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "reference.projectsettings.compiler.annotationProcessors",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;mysql&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "mysql"
     ]
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="teektokApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <option name="ALTERNATIVE_JRE_PATH" value="17" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <module name="book-sys" />
+      <module name="teektok" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="teektok.teektokApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
@@ -170,8 +142,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.26094.121" />
-        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-IU-251.26094.121" />
+        <option value="bundled-jdk-30f59d01ecdd-26cb7f24e5b0-intellij.indexing.shared.core-IU-253.29346.240" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.29346.240" />
       </set>
     </attachedChunks>
   </component>
@@ -186,6 +158,7 @@
       <workItem from="1761567660477" duration="885000" />
       <workItem from="1768204670478" duration="3486000" />
       <workItem from="1768266533593" duration="13192000" />
+      <workItem from="1768531709422" duration="711000" />
     </task>
     <task id="LOCAL-00001" summary="Add .idea directory to .gitignore">
       <option name="closed" value="true" />

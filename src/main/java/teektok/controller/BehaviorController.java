@@ -28,10 +28,11 @@ public class BehaviorController {
     }
 
     @Operation(summary = "播放视频")
-    @PostMapping("/like")
+    @PostMapping("/play")
     public Result<Void> play(
-            @RequestParam("videoId") Long videoId,
-            @RequestParam("userId") Long userId) {
+        @RequestParam("videoId") Long videoId,
+        @RequestParam("userId") Long userId
+    ) {
         behaviorService.play(videoId, userId);
         return Result.success();
     }
@@ -44,8 +45,9 @@ public class BehaviorController {
     }
 
     public Result<Void> unlike(
-            @RequestParam("videoId") Long videoId,
-            @RequestParam("userId") Long userId) {
+        @RequestParam("videoId") Long videoId,
+        @RequestParam("userId") Long userId
+    ) {
         behaviorService.unlike(videoId, userId);
         return Result.success();
     }
