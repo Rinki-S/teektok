@@ -1,7 +1,7 @@
 接口文档与接口-DTO-VO映射文档：启动项目后，用下面网址
 http://localhost:8080/swagger-ui/index.html#/
 
-数据库建表语句（1-16 9:31）：
+数据库建表语句（1-16 9:37）：
 create table admin
 (
     id          int auto_increment comment '管理员ID'
@@ -39,12 +39,12 @@ create table user
 
 create table user_behavior
 (
-    id            int auto_increment comment '行为ID'
+    id           int auto_increment comment '行为ID'
         primary key,
-    user_id       int                                not null comment '用户ID',
-    video_id      int                                not null comment '视频ID',
-    behavior_type tinyint                            not null comment '1播放 2点赞 3收藏 4评论',
-    create_time   datetime default CURRENT_TIMESTAMP null
+    user_id      int                                not null comment '用户ID',
+    video_id     int                                not null comment '视频ID',
+    collect_type tinyint                            not null comment '1播放 2点赞 3收藏 4评论',
+    create_time  datetime default CURRENT_TIMESTAMP null
 )
     comment '用户行为记录表';
 
@@ -65,7 +65,7 @@ create table video
 )
     comment '视频表';
 
-create table video_favorite
+create table video_collect
 (
     id          int auto_increment comment '收藏ID'
         primary key,
@@ -91,14 +91,14 @@ create table video_like
 
 create table video_stat
 (
-    video_id       int                                not null comment '视频ID'
+    video_id      int                                not null comment '视频ID'
         primary key,
-    play_count     int      default 0                 null,
-    like_count     int      default 0                 null,
-    comment_count  int      default 0                 null,
-    favorite_count int      default 0                 null,
-    update_time    datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP,
-    share_count    int                                null comment '分享数'
+    play_count    int      default 0                 null,
+    like_count    int      default 0                 null,
+    comment_count int      default 0                 null,
+    collect_count int      default 0                 null,
+    update_time   datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP,
+    share_count   int                                null comment '分享数'
 )
     comment '视频统计表';
 
