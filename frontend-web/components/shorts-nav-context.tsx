@@ -130,6 +130,10 @@ export function ShortsNavigatorPresenter({
 }) {
   const { state } = useShortsNav();
 
+  if (state.total <= 0) {
+    return null;
+  }
+
   return (
     <div className={className}>
       <ShortsNavigator

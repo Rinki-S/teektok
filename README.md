@@ -43,7 +43,7 @@ create table user_behavior
         primary key,
     user_id       int                                not null comment '用户ID',
     video_id      int                                not null comment '视频ID',
-    favorite_type tinyint                            not null comment '1播放 2点赞 3收藏 4评论',
+    behavior_type tinyint                            not null comment '1播放 2点赞 3收藏 4评论',
     create_time   datetime default CURRENT_TIMESTAMP null
 )
     comment '用户行为记录表';

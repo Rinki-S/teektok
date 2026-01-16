@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { CircleUserRound, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Searchbar } from "./searchbar";
 import { Button } from "./ui/button";
@@ -14,18 +15,66 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type LoginMode = "password" | "sms";
 
+type AuthUser = {
+  userId: number;
+  username: string;
+  token: string;
+};
+
+const AUTH_STORAGE_KEY = "teektok.auth";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
 export function AppTopbar() {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [mode, setMode] = React.useState<LoginMode>("password");
+  const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [smsCode, setSmsCode] = React.useState("");
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleLogout = React.useCallback(() => {
+    setAuthUser(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+    router.push("/");
+  }, [router]);
 
   const phoneId = React.useId();
   const smsCodeId = React.useId();
   const passwordId = React.useId();
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as AuthUser;
+      if (parsed?.token && parsed?.userId) {
+        setAuthUser(parsed);
+      }
+    } catch {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+  }, []);
 
   function onKeyDownOverlay(e: React.KeyboardEvent<HTMLDivElement>) {
     // Radix already handles Esc, but this provides a fallback if structure changes.
@@ -42,10 +91,41 @@ export function AppTopbar() {
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogTrigger asChild>
-          <Button className="h-full px-4 rounded-xl">
-            <CircleUserRound size={16} strokeWidth={3} />
-            <p className="text-[16px] font-semibold pt-0.5">登录</p>
-          </Button>
+          {authUser ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full transition-transform hover:scale-105"
+                  aria-label="已登录"
+                >
+                  <Avatar size="lg">
+                    <AvatarImage src="" alt={authUser.username} />
+                    <AvatarFallback>
+                      {authUser.username.slice(0, 1).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>账号</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/me")}>
+                  我的
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/me")}>设置</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                  退出登录
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button className="h-full px-4 rounded-xl">
+              <CircleUserRound size={16} strokeWidth={3} />
+              <p className="text-[16px] font-semibold pt-0.5">登录</p>
+            </Button>
+          )}
         </AlertDialogTrigger>
 
         <AlertDialogContent
@@ -110,22 +190,80 @@ export function AppTopbar() {
 
             <form
               className="mt-4 grid gap-4"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                // Wire this up to real auth later. For now, just close.
-                setOpen(false);
+                if (mode === "sms") {
+                  setErrorMessage("短信验证码登录暂未接入");
+                  return;
+                }
+                if (!username || !password) {
+                  setErrorMessage("请输入用户名和密码");
+                  return;
+                }
+                setIsSubmitting(true);
+                setErrorMessage(null);
+                try {
+                  const res = await fetch(`${API_BASE_URL}/api/user/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password }),
+                  });
+
+                  const text = await res.text();
+                  const parsed = text ? JSON.parse(text) : null;
+                  if (!res.ok) {
+                    const msg =
+                      parsed &&
+                      typeof parsed === "object" &&
+                      parsed !== null &&
+                      "msg" in parsed &&
+                      typeof (parsed as { msg?: unknown }).msg === "string"
+                        ? (parsed as { msg: string }).msg
+                        : res.statusText || "登录失败";
+                    throw new Error(msg);
+                  }
+
+                  if (!parsed || parsed.code !== 200 || !parsed.data) {
+                    throw new Error("登录失败，请重试");
+                  }
+
+                  const user = {
+                    userId: Number(parsed.data.userId),
+                    username,
+                    token: String(parsed.data.token || ""),
+                  } satisfies AuthUser;
+
+                  setAuthUser(user);
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem(
+                      AUTH_STORAGE_KEY,
+                      JSON.stringify(user),
+                    );
+                  }
+                  setOpen(false);
+                  setPassword("");
+                  setSmsCode("");
+                  router.push("/me");
+                } catch (error) {
+                  const message =
+                    error instanceof Error ? error.message : "登录失败";
+                  setErrorMessage(message);
+                } finally {
+                  setIsSubmitting(false);
+                }
               }}
             >
               <div className="grid gap-2">
                 <Label htmlFor={phoneId} className="text-slate-700">
-                  手机号
+                  用户名
                 </Label>
                 <Input
                   id={phoneId}
-                  inputMode="tel"
-                  placeholder="请输入手机号"
-                  autoComplete="tel"
+                  placeholder="请输入用户名"
+                  autoComplete="username"
                   className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-300 focus-visible:ring-slate-300/40"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>
@@ -142,6 +280,8 @@ export function AppTopbar() {
                       placeholder="6位验证码"
                       autoComplete="one-time-code"
                       className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-300 focus-visible:ring-slate-300/40"
+                      value={smsCode}
+                      onChange={(e) => setSmsCode(e.target.value)}
                       required
                     />
                     <Button
@@ -149,7 +289,7 @@ export function AppTopbar() {
                       variant="outline"
                       className="h-11 rounded-2xl border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-900"
                       onClick={() => {
-                        // TODO: trigger "send code" via API
+                        setErrorMessage("短信验证码登录暂未接入");
                       }}
                     >
                       获取验证码
@@ -167,17 +307,26 @@ export function AppTopbar() {
                     placeholder="请输入密码"
                     autoComplete="current-password"
                     className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:border-slate-300 focus-visible:ring-slate-300/40"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                 </div>
               )}
 
+              {errorMessage ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {errorMessage}
+                </div>
+              ) : null}
+
               <div className="pt-1">
                 <Button
                   type="submit"
                   className="h-11 w-full rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90"
+                  disabled={isSubmitting}
                 >
-                  登录
+                  {isSubmitting ? "登录中..." : "登录"}
                 </Button>
               </div>
 
