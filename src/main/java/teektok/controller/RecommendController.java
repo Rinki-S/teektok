@@ -3,45 +3,33 @@ package teektok.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import teektok.dto.commen.Result;
-import teektok.dto.recommend.PersonalRecommendDto;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.service.IRecommendService;
 
 import java.util.List;
 
-@Tag(name = "推荐与排行榜模块")
 @RestController
 @RequestMapping("/api/recommend")
+@Tag(name = "推荐模块", description = "提供视频流服务")
 public class RecommendController {
 
     @Autowired
     private IRecommendService recommendService;
 
-    /**
-     * 获取热门视频列表
-     * 接口: GET /recommend/hot
-     */
-    @Operation(summary = "获取热门视频")
-    @GetMapping("/hot")
-    public Result<List<RecommendVideoVO>> hotList() {
-        List<RecommendVideoVO> list = recommendService.getHotVideos();
+    @Operation(summary = "获取个性化推荐视频流")
+    @GetMapping("/{userId}")
+    public Result<List<RecommendVideoVO>> getFeed(@PathVariable Long userId) {
+        // 如果前端没传 userId，说明是游客，Service 会自动走兜底逻辑
+        List<RecommendVideoVO> list = recommendService.getPersonalRecommendFeed(userId);
         return Result.success(list);
     }
 
-    /**
-     * 获取个性化推荐
-     * 接口: GET /recommend/personal
-     * 参数: userId (in DTO or Query param)
-     */
-    @Operation(summary = "获取个性化推荐")
-    @GetMapping("/personal")
-    public Result<List<RecommendVideoVO>> personalRecommend(PersonalRecommendDto dto) {
-        // GET 请求，参数会自动绑定到 DTO 对象
-        List<RecommendVideoVO> list = recommendService.getPersonalVideos(dto.getUserId());
+    @Operation(summary = "获取热门推荐视频流")
+    @GetMapping("/hot")
+    public Result<List<RecommendVideoVO>> getHot() {
+        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed();
         return Result.success(list);
     }
 }
