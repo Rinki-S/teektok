@@ -44,3 +44,14 @@ export interface FollowUserRequest {
   userId: string;
   isFollowing: boolean;
 }
+
+export interface Comment {
+  id: string;
+  videoId: string;
+  userId: string;
+  content: string;
+  createTime: string;
+  username: string;
+  avatar?: string;
+}
+

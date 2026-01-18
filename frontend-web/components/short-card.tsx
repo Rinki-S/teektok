@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import type { Video } from "@/types/video";
 import { VideoItem } from "@/components/video-item";
 import { ShortsActions } from "@/components/shorts-actions";
@@ -52,13 +52,24 @@ export function ShortCard({
   className,
 }: ShortCardProps) {
   return (
-    <div className="relative flex h-full w-full min-h-0 flex-1 overflow-hidden rounded-t-3xl md:rounded-3xl">
+    <div
+      className={[
+        "relative flex h-full w-full min-h-0 flex-1 overflow-hidden rounded-t-3xl md:rounded-3xl",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {/* Video fills the whole card; VideoItem already renders author/description overlay. */}
       <div className="relative h-[calc(100%-16px)] w-full min-h-0 flex-1 overflow-hidden bg-black rounded-t-3xl md:rounded-3xl">
         <VideoItem video={video} isActive={isActive} onLike={onLike} />
 
         {/* Actions overlay (right side, inside this card) */}
-        <div className="absolute bottom-4 right-4 z-20">
+        <div
+          className="absolute bottom-4 right-4 z-20"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
           <ShortsActions
             video={video}
             onLike={onLike}

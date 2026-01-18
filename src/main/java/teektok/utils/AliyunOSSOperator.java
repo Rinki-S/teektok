@@ -4,6 +4,7 @@ import com.aliyun.oss.*;
 import com.aliyun.oss.common.auth.CredentialsProviderFactory;
 import com.aliyun.oss.common.auth.EnvironmentVariableCredentialsProvider;
 import com.aliyun.oss.common.comm.SignVersion;
+import com.aliyun.oss.model.ObjectMetadata;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +19,7 @@ public class AliyunOSSOperator {
     @Autowired
     private AliyunOSSProperties aliyunOSSProperties;
 
-    public String upload(byte[] content, String originalFilename) throws Exception {
+    public String upload(byte[] content, String originalFilename, String contentType) throws Exception {
         String endpoint = aliyunOSSProperties.getEndpoint();
         String bucketName = aliyunOSSProperties.getBucketName();
         String region = aliyunOSSProperties.getRegion();
@@ -43,7 +44,14 @@ public class AliyunOSSOperator {
                 .build();
 
         try {
-            ossClient.putObject(bucketName, objectName, new ByteArrayInputStream(content));
+            // 创建 ObjectMetadata 并设置 Content-Type
+            ObjectMetadata metadata = new ObjectMetadata();
+            if (contentType != null && !contentType.isEmpty()) {
+                metadata.setContentType(contentType);
+            }
+            metadata.setContentLength(content.length);
+            
+            ossClient.putObject(bucketName, objectName, new ByteArrayInputStream(content), metadata);
         } finally {
             ossClient.shutdown();
         }

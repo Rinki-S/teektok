@@ -76,6 +76,19 @@ export function AppTopbar() {
     }
   }, []);
 
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOpenLogin = () => {
+      if (!authUser) {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("teektok:open-login", handleOpenLogin);
+    return () => {
+      window.removeEventListener("teektok:open-login", handleOpenLogin);
+    };
+  }, [authUser]);
+
   function onKeyDownOverlay(e: React.KeyboardEvent<HTMLDivElement>) {
     // Radix already handles Esc, but this provides a fallback if structure changes.
     if (e.key === "Escape") setOpen(false);

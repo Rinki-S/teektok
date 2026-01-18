@@ -4,7 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import teektok.dto.comment.CommentCreateDTO;
@@ -15,9 +16,18 @@ import teektok.service.IBehaviorService;
 
 import java.time.LocalDateTime;
 
-@Slf4j
+import teektok.VO.CommentVO;
+import teektok.VO.PageResult;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.beans.BeanUtils;
+import java.util.stream.Collectors;
+import java.util.*;
+import java.util.function.Function;
+
 @Service
 public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBehavior> implements IBehaviorService {
+    private static final Logger log = LoggerFactory.getLogger(BehaviorServiceImpl.class);
+
     @Autowired
     private VideoStatMapper videoStatMapper;
     @Autowired
@@ -30,6 +40,8 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
     private BehaviorEventPubliser eventPublisher;
     @Autowired
     private UserBehaviorMapper userBehaviorMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public void play(Long videoId, Long userId) {
@@ -168,6 +180,51 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
 
         // 3. 发布事件
 //        eventPublisher.publishCommentEvent(dto.getVideoId(), userId, dto.getContent());
+    }
+
+    @Override
+    public PageResult<CommentVO> listComments(Long videoId, int page, int size) {
+        // 1. 分页查询评论
+        Page<Comment> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<Comment> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Comment::getVideoId, videoId)
+                .orderByDesc(Comment::getCreateTime);
+
+        Page<Comment> commentPage = commentMapper.selectPage(pageParam, queryWrapper);
+
+        List<CommentVO> voList = new ArrayList<>();
+        if (commentPage.getRecords().isEmpty()) {
+            return new PageResult<>(voList, commentPage.getTotal());
+        }
+
+        // 2. 收集用户ID
+        Set<Long> userIds = commentPage.getRecords().stream()
+                .map(Comment::getUserId)
+                .collect(Collectors.toSet());
+
+        // 3. 批量查询用户
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(userIds);
+            userMap = users.stream().collect(Collectors.toMap(User::getId, Function.identity()));
+        }
+
+        // 4. 组装 VO
+        for (Comment comment : commentPage.getRecords()) {
+            CommentVO vo = new CommentVO();
+            BeanUtils.copyProperties(comment, vo);
+
+            User user = userMap.get(comment.getUserId());
+            if (user != null) {
+                vo.setUsername(user.getUsername());
+                vo.setAvatar(user.getAvatar());
+            } else {
+                vo.setUsername("用户" + comment.getUserId());
+            }
+            voList.add(vo);
+        }
+
+        return new PageResult<>(voList, commentPage.getTotal());
     }
 
     @Override

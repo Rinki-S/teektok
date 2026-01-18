@@ -12,6 +12,7 @@ import type {
   LikeVideoRequest,
   BookmarkVideoRequest,
   FollowUserRequest,
+  Comment,
 } from "@/types/video";
 
 // OpenAPI paths already include `/api` prefix.
@@ -28,11 +29,21 @@ type ApiEnvelope<T> = {
   data?: T;
 };
 
-type OpenApiVideoListItem = {
+type PageResult<T> = {
+  list: T[];
+  total: number;
+};
+
+type VideoVO = {
   videoId: number;
   title: string;
-  playCount?: number;
-  likeCount?: number;
+  videoUrl: string;
+  coverUrl: string;
+  playCount: number;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  favoriteCount: number;
 };
 
 function joinUrl(baseUrl: string, path: string) {
@@ -41,15 +52,32 @@ function joinUrl(baseUrl: string, path: string) {
   return `${b}${p}`;
 }
 
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem("teektok.auth");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { token?: unknown } | null;
+    const token = parsed?.token;
+    return typeof token === "string" && token ? token : null;
+  } catch {
+    return null;
+  }
+}
+
 async function requestOpenApi<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
   const url = joinUrl(API_BASE_URL, path);
+
+  const token = getAuthToken();
+
   const res = await fetch(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { token } : {}),
       ...(init.headers ?? {}),
     },
   });
@@ -60,10 +88,10 @@ async function requestOpenApi<T>(
   if (!res.ok) {
     const msg =
       parsed &&
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "msg" in parsed &&
-      typeof (parsed as { msg?: unknown }).msg === "string"
+        typeof parsed === "object" &&
+        parsed !== null &&
+        "msg" in parsed &&
+        typeof (parsed as { msg?: unknown }).msg === "string"
         ? (parsed as { msg: string }).msg
         : res.statusText || "Request failed";
     throw new Error(msg);
@@ -83,15 +111,13 @@ async function requestOpenApi<T>(
   return parsed as T;
 }
 
-function mapOpenApiVideoListItemToVideo(item: OpenApiVideoListItem): Video {
-  // frontend 的 Video 类型与后端 VO 不一致（当前 types/video.ts 是 UI 模型）。
-  // 这里做一个“尽量合理”的映射：保证 use-video-feed.ts 能跑起来。
+function mapVideoVOToVideo(item: VideoVO): Video {
   const id = String(item.videoId);
 
   return {
     id,
-    videoUrl: "/vid.mp4",
-    thumbnailUrl: "/vid.mp4",
+    videoUrl: item.videoUrl || "/vid.mp4",
+    thumbnailUrl: item.coverUrl || "/vid.mp4",
     title: item.title ?? `视频 ${id}`,
     description: "",
     author: {
@@ -102,8 +128,8 @@ function mapOpenApiVideoListItemToVideo(item: OpenApiVideoListItem): Video {
     },
     stats: {
       likes: item.likeCount ?? 0,
-      comments: 0,
-      shares: 0,
+      comments: item.commentCount ?? 0,
+      shares: item.shareCount ?? 0,
       views: item.playCount ?? 0,
     },
     isLiked: false,
@@ -114,8 +140,9 @@ function mapOpenApiVideoListItemToVideo(item: OpenApiVideoListItem): Video {
 
 // ============================================
 // OpenAPI 对齐：视频列表（用来驱动 feed）
-// - GET /api/api/video/list?videoQueryDTO.page=1&videoQueryDTO.size=10
+// - GET /api/video/list?page=1&size=10
 // ============================================
+
 
 export async function getVideoFeed(
   cursor?: string,
@@ -126,22 +153,24 @@ export async function getVideoFeed(
   const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
 
   const params = new URLSearchParams({
-    "videoQueryDTO.page": String(page),
-    "videoQueryDTO.size": String(limit),
+    page: String(page),
+    size: String(limit),
   });
 
-  const data = await requestOpenApi<OpenApiVideoListItem[]>(
-    `/api/api/video/list?${params.toString()}`,
+  const data = await requestOpenApi<PageResult<VideoVO>>(
+    `/api/video/list?${params.toString()}`,
     { method: "GET" },
   );
 
-  const items = Array.isArray(data) ? data : [];
-  const videos = items.map(mapOpenApiVideoListItemToVideo);
+  const items = Array.isArray(data?.list) ? data.list : [];
+  const videos = items.map(mapVideoVOToVideo);
+  const total = typeof data?.total === "number" ? data.total : 0;
+  const hasMore = total > 0 ? page * limit < total : items.length === limit;
 
   return {
     videos,
-    nextCursor: items.length === limit ? String(page + 1) : undefined,
-    hasMore: items.length === limit,
+    nextCursor: hasMore ? String(page + 1) : undefined,
+    hasMore,
   };
 }
 
@@ -154,7 +183,7 @@ export async function incrementVideoView(videoId: string): Promise<void> {
   const videoIdNum = Number(videoId);
   if (!Number.isFinite(videoIdNum)) return;
 
-  await requestOpenApi<void>("/api/api/video/play", {
+  await requestOpenApi<void>("/api/behavior/play", {
     method: "POST",
     body: JSON.stringify({ videoId: videoIdNum }),
   });
@@ -173,11 +202,11 @@ export async function toggleLikeVideo(
   const videoIdNum = Number(request.videoId);
   if (!Number.isFinite(videoIdNum)) return;
 
-  // OpenAPI 没有 isLiked 的开关语义；该接口名是“点赞视频”。
-  // 这里采用：isLiked=true 才发请求；false 不调用（当作“取消点赞”后端暂不支持）。
-  if (!request.isLiked) return;
+  const endpoint = request.isLiked
+    ? "/api/behavior/like"
+    : "/api/behavior/unlike";
 
-  await requestOpenApi<void>("/api/behavior/like", {
+  await requestOpenApi<void>(endpoint, {
     method: "POST",
     body: JSON.stringify({ videoId: videoIdNum }),
   });
@@ -208,6 +237,35 @@ export async function createComment(
     method: "POST",
     body: JSON.stringify({ videoId: videoIdNum, content }),
   });
+}
+
+/**
+ * 获取评论列表
+ * OpenAPI: GET /api/comment/list?videoId=...&page=...&size=...
+ */
+export async function getComments(
+  videoId: string,
+  page: number = 1,
+  size: number = 10,
+): Promise<{ list: Comment[]; total: number }> {
+  const videoIdNum = Number(videoId);
+  if (!Number.isFinite(videoIdNum)) return { list: [], total: 0 };
+
+  const params = new URLSearchParams({
+    videoId: String(videoIdNum),
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<Comment>>(
+    `/api/comment/list?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  return {
+    list: data?.list ?? [],
+    total: data?.total ?? 0,
+  };
 }
 
 // ============================================

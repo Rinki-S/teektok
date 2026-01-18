@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bookmark, Heart, MessageCircle, Plus, Share2 } from "lucide-react";
 import type { Video } from "@/types/video";
 import { cn } from "@/lib/utils";
+import { CommentsSheet } from "@/components/comments-sheet";
 
 interface ShortsActionsProps {
   video: Video;
@@ -104,13 +105,15 @@ export function ShortsActions({
 
       {/* 评论 */}
       <div className="flex flex-col items-center">
-        <Button
-          variant="ghost"
-          className="rounded-full w-14 h-14"
-          onClick={() => onComment(video.id)}
-        >
-          <MessageCircle className="size-8" />
-        </Button>
+        <CommentsSheet videoId={video.id} triggerAsChild>
+          <Button
+            variant="ghost"
+            className="rounded-full w-14 h-14"
+            onClick={() => onComment(video.id)}
+          >
+            <MessageCircle className="size-8" />
+          </Button>
+        </CommentsSheet>
         <div className="text-center text-[16px] font-bold mt-1">
           {formatCount(video.stats.comments)}
         </div>
