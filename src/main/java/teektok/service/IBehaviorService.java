@@ -34,6 +34,11 @@ public interface IBehaviorService {
     void comment(CommentCreateDTO commentCreateDTO, Long userId);
 
     /*
+     * 获取视频评论列表
+     * */
+    teektok.VO.PageResult<teektok.VO.CommentVO> listComments(Long videoId, int page, int size);
+
+    /*
      * 转发视频
      * */
     void share(Long videoId, Long userId);

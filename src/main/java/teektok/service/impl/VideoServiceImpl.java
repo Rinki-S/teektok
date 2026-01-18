@@ -51,7 +51,12 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         String url;
 
         try {
-            url = aliyunOSSOperator.upload(videoUploadDTO.getFile().getBytes(), videoUploadDTO.getFile().getOriginalFilename());
+            // 传递 contentType
+            url = aliyunOSSOperator.upload(
+                videoUploadDTO.getFile().getBytes(), 
+                videoUploadDTO.getFile().getOriginalFilename(),
+                videoUploadDTO.getFile().getContentType()
+            );
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("上传视频失败", e);
