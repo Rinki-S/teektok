@@ -1,8 +1,14 @@
 package teektok.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import teektok.dto.analysis.VideoAnalysisVO;
+import teektok.entity.UserBehavior;
+import teektok.mapper.CommentMapper;
+import teektok.mapper.UserBehaviorMapper;
+import teektok.mapper.VideoLikeMapper;
 import teektok.service.IAnalysisService;
 
 @Slf4j
@@ -10,32 +16,27 @@ import teektok.service.IAnalysisService;
 public class AnalysisServiceImpl implements IAnalysisService {
 
     // TODO: 注入你实际生成的 Mapper
-    // @Autowired
-    // private UserBehaviorMapper userBehaviorMapper;
+    @Autowired
+    private UserBehaviorMapper userBehaviorMapper;
 
-    // @Autowired
-    // private CommentMapper commentMapper;
+    @Autowired
+    private VideoLikeMapper videoLikeMapper;
+
+    @Autowired
+    private CommentMapper commentMapper;
 
     @Override
     public VideoAnalysisVO getVideoAnalysis() {
         VideoAnalysisVO vo = new VideoAnalysisVO();
 
-        // --- 模拟业务逻辑 (Framework Stage) ---
-
         // 1. 获取全站播放量
-        // 实际代码示例:
-        // Long playCount = userBehaviorMapper.selectCount(new LambdaQueryWrapper<UserBehavior>().eq(UserBehavior::getBehaviorType, 1));
-        Long playCount = 1000L; // Mock 数据
+        Long playCount = userBehaviorMapper.selectCount(new LambdaQueryWrapper<UserBehavior>().eq(UserBehavior::getBehaviorType, 1));
 
         // 2. 获取全站点赞量
-        // 实际代码示例:
-        // Long likeCount = videoLikeMapper.selectCount(null);
-        Long likeCount = 500L;  // Mock 数据
+        Long likeCount = videoLikeMapper.selectCount(null);
 
         // 3. 获取全站评论量
-        // 实际代码示例:
-        // Long commentCount = commentMapper.selectCount(null);
-        Long commentCount = 200L; // Mock 数据
+        Long commentCount = commentMapper.selectCount(null);
 
         // 4. 封装 VO
         vo.setPlayCount(playCount);
