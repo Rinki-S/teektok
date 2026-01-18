@@ -7,6 +7,8 @@ import { Bookmark, Heart, MessageCircle, Plus, Share2 } from "lucide-react";
 import type { Video } from "@/types/video";
 import { cn } from "@/lib/utils";
 import { CommentsSheet } from "@/components/comments-sheet";
+import { ShareSheet } from "@/components/share-sheet";
+import { toast } from "sonner";
 
 interface ShortsActionsProps {
   video: Video;
@@ -31,6 +33,8 @@ export function ShortsActions({
     video.author.isFollowing || false,
   );
   const [likesCount, setLikesCount] = useState(video.stats.likes);
+  const [sharesCount, setSharesCount] = useState(video.stats.shares);
+  const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
 
   const handleLike = () => {
     const newLikedState = !isLiked;
@@ -49,6 +53,30 @@ export function ShortsActions({
     const newFollowingState = !isFollowing;
     setIsFollowing(newFollowingState);
     onFollow(video.author.id, newFollowingState);
+  };
+
+  const handleShareAction = () => {
+    onShare(video.id);
+    setSharesCount((prev) => prev + 1);
+    setIsShareSheetOpen(false);
+  };
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/video/${video.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("链接已复制到剪贴板！");
+      handleShareAction();
+    } catch (err) {
+      console.error("Failed to copy link:", err);
+      toast.error("复制失败");
+    }
+  };
+
+  const handleShareToFriend = () => {
+    // 模拟好友分享
+    toast.success("已分享给好友 (模拟)");
+    handleShareAction();
   };
 
   const formatCount = (count: number): string => {
@@ -141,12 +169,21 @@ export function ShortsActions({
         <Button
           variant="ghost"
           className="rounded-full w-14 h-14"
-          onClick={() => onShare(video.id)}
+          onClick={() => setIsShareSheetOpen(true)}
         >
           <Share2 className="size-8" />
         </Button>
-        <div className="text-center text-[16px] font-bold mt-1">分享</div>
+        <div className="text-center text-[16px] font-bold mt-1">
+          {formatCount(sharesCount)}
+        </div>
       </div>
+      
+      <ShareSheet
+        isOpen={isShareSheetOpen}
+        onOpenChange={setIsShareSheetOpen}
+        onCopyLink={handleCopyLink}
+        onShareToFriend={handleShareToFriend}
+      />
     </div>
   );
 }

@@ -174,6 +174,17 @@ export async function getVideoFeed(
   };
 }
 
+export async function getVideoById(videoId: string): Promise<Video> {
+  const videoIdNum = Number(videoId);
+  if (!Number.isFinite(videoIdNum)) throw new Error("Invalid video ID");
+
+  const item = await requestOpenApi<VideoVO>(`/api/video/${videoIdNum}`, {
+    method: "GET",
+  });
+
+  return mapVideoVOToVideo(item);
+}
+
 // ============================================
 // OpenAPI 对齐：播放行为
 // - POST /api/api/video/play  body: { videoId: number(int32) }

@@ -66,7 +66,7 @@ export function ShortCard({
 
         {/* Actions overlay (right side, inside this card) */}
         <div
-          className="absolute bottom-4 right-4 z-20"
+          className="absolute right-0 bottom-4 md:right-4 z-20"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >

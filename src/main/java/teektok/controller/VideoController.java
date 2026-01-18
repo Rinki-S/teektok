@@ -46,6 +46,12 @@ public class VideoController {
         return Result.success(videoService.list(videoQueryDTO));
     }
 
+    @Operation(summary = "获取视频详情")
+    @GetMapping("/{id}")
+    public Result<VideoVO> getDetail(@PathVariable Long id) {
+        return Result.success(videoService.getDetail(id));
+    }
+
     // ==================== 播放视频 ====================
 
 /*    @Operation(summary = "播放视频（记录播放行为）")

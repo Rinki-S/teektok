@@ -22,6 +22,11 @@ public interface IVideoService {
      * */
     PageResult<VideoVO> list(VideoQueryDTO videoQueryDTO);
 
+    /**
+     * 获取视频详情
+     */
+    VideoVO getDetail(Long videoId);
+
     /*
      * 播放视频（记录播放行为）
      * *//*

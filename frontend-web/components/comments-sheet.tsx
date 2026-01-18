@@ -80,9 +80,9 @@ export function CommentsSheet({
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild={triggerAsChild}>{children}</SheetTrigger>
-      <SheetContent side="bottom" className="h-[75vh] flex flex-col p-0 gap-0 rounded-t-xl">
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle className="text-center text-sm">
+      <SheetContent side="bottom" className="!h-[75vh] flex flex-col p-0 gap-0 rounded-t-xl max-w-lg mx-auto">
+        <SheetHeader className="p-4 border-b relative flex flex-row items-center justify-center min-h-[60px]">
+          <SheetTitle className="text-center text-sm font-bold">
             {comments.length > 0 ? `${comments.length} 条评论` : "评论"}
           </SheetTitle>
         </SheetHeader>
@@ -129,15 +129,15 @@ export function CommentsSheet({
         <Separator />
 
         <div className="p-4 bg-background">
-          <div className="flex items-end gap-2">
-            <Avatar className="w-8 h-8">
+          <div className="flex items-center gap-2">
+            <Avatar className="w-8 h-8 shrink-0">
               {/* 这里理论上应该显示当前登录用户的头像 */}
               <AvatarFallback>我</AvatarFallback>
             </Avatar>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative flex items-center">
               <Textarea
                 placeholder="留下你的精彩评论..."
-                className="min-h-[40px] max-h-[100px] resize-none pr-10 py-2"
+                className="min-h-[40px] max-h-[100px] resize-none pr-10 py-2 w-full"
                 rows={1}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -151,7 +151,7 @@ export function CommentsSheet({
               <Button
                 size="icon"
                 variant="ghost"
-                className="absolute right-1 bottom-1 h-8 w-8 text-primary hover:text-primary/80"
+                className="absolute right-1 h-8 w-8 text-primary hover:text-primary/80"
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || submitting}
               >

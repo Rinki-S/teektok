@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Video } from "@/types/video";
 import {
   getVideoFeed,
+  getVideoById,
   toggleLikeVideo,
   toggleBookmarkVideo,
   toggleFollowUser,
@@ -25,7 +26,7 @@ interface UseVideoFeedReturn {
   loadMoreVideos: () => Promise<void>;
 }
 
-export function useVideoFeed(): UseVideoFeedReturn {
+export function useVideoFeed(initialVideoId?: string): UseVideoFeedReturn {
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,7 +37,7 @@ export function useVideoFeed(): UseVideoFeedReturn {
   // 初始加载视频
   useEffect(() => {
     loadVideos();
-  }, []);
+  }, [initialVideoId]);
 
   // 当前视频变化时，记录播放次数
   useEffect(() => {
@@ -53,12 +54,18 @@ export function useVideoFeed(): UseVideoFeedReturn {
       setIsLoading(true);
       setError(null);
 
-      // TODO: 这里调用实际的 API
-      const response = await getVideoFeed(undefined, 10);
-
-      setVideos(response.videos);
-      setNextCursor(response.nextCursor);
-      setHasMore(response.hasMore);
+      if (initialVideoId) {
+        // 单视频模式
+        const video = await getVideoById(initialVideoId);
+        setVideos([video]);
+        setHasMore(false);
+      } else {
+        // 列表模式
+        const response = await getVideoFeed(undefined, 10);
+        setVideos(response.videos);
+        setNextCursor(response.nextCursor);
+        setHasMore(response.hasMore);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load videos");
       console.error("Error loading videos:", err);
@@ -69,6 +76,7 @@ export function useVideoFeed(): UseVideoFeedReturn {
 
   // 加载更多视频
   const loadMoreVideos = async () => {
+    if (initialVideoId) return; // 单视频模式不加载更多
     if (!hasMore || isLoading) return;
 
     try {
@@ -198,27 +206,11 @@ export function useVideoFeed(): UseVideoFeedReturn {
     []
   );
 
-  // 处理分享
+  // 处理分享（仅记录行为和更新计数）
   const handleShare = useCallback(async (videoId: string) => {
     try {
-      // TODO: 调用后端 API 记录分享
+      // 调用后端 API 记录分享
       await shareVideo(videoId);
-
-      // TODO: 实现真实的分享功能（调用系统分享 API 或显示分享面板）
-      if (navigator.share) {
-        const video = videos.find((v) => v.id === videoId);
-        if (video) {
-          await navigator.share({
-            title: video.title,
-            text: video.description,
-            url: window.location.href,
-          });
-        }
-      } else {
-        // 降级方案：复制链接到剪贴板
-        await navigator.clipboard.writeText(window.location.href);
-        alert("链接已复制到剪贴板！");
-      }
 
       // 更新分享计数
       setVideos((prev) =>
@@ -237,13 +229,13 @@ export function useVideoFeed(): UseVideoFeedReturn {
     } catch (err) {
       console.error("Failed to share video:", err);
     }
-  }, [videos]);
+  }, []);
 
   // 处理评论
   const handleComment = useCallback((videoId: string) => {
-    // TODO: 打开评论面板或跳转到评论页面
-    console.log("Open comments for video:", videoId);
-    alert(`评论功能开发中，视频 ID: ${videoId}`);
+    // 评论功能已通过 ShortsActions 中的 CommentsSheet 组件实现
+    // 此处仅保留日志，或用于打点统计
+    console.log("Comment section opened for video:", videoId);
   }, []);
 
   return {

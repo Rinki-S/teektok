@@ -1,5 +1,6 @@
 package teektok.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -157,5 +158,35 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     @Override
     public List<RecommendVideoVO> getVideoRecommendVOs(List<Long> videoIds) {
         return List.of();
+    }
+
+    @Override
+    public VideoVO getDetail(Long videoId) {
+        // 1. 查询视频实体
+        Video video = this.getById(videoId);
+        if (video == null) {
+            throw new RuntimeException("视频不存在");
+        }
+        // 2. 转换 VO
+        VideoVO vo = toVO(video);
+
+        // 3. 补充统计数据
+        VideoStat stat = videoStatMapper.selectOne(
+                new LambdaQueryWrapper<VideoStat>().eq(VideoStat::getVideoId, videoId)
+        );
+        if (stat != null) {
+            vo.setPlayCount(stat.getPlayCount());
+            vo.setLikeCount(stat.getLikeCount());
+            vo.setCommentCount(stat.getCommentCount());
+            vo.setShareCount(stat.getShareCount());
+            vo.setFavoriteCount(stat.getFavoriteCount());
+        } else {
+            vo.setPlayCount(0L);
+            vo.setLikeCount(0L);
+            vo.setCommentCount(0L);
+            vo.setShareCount(0L);
+            vo.setFavoriteCount(0L);
+        }
+        return vo;
     }
 }

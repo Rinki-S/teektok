@@ -25,20 +25,28 @@ const tabLabels: { key: TabKey; label: string }[] = [
 export default function MePage() {
   const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);
   const [activeTab, setActiveTab] = React.useState<TabKey>("works");
+  const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as AuthUser;
-      if (parsed?.token && parsed?.userId) {
-        setAuthUser(parsed);
+      if (raw) {
+        const parsed = JSON.parse(raw) as AuthUser;
+        if (parsed?.token && parsed?.userId) {
+          setAuthUser(parsed);
+        }
       }
     } catch {
       window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!authUser) {
     return (
