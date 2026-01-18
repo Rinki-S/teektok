@@ -52,6 +52,31 @@ public class VideoController {
         return Result.success(videoService.getDetail(id));
     }
 
+    @Operation(summary = "获取当前用户点赞的视频列表")
+    @GetMapping("/liked")
+    public Result<PageResult<VideoVO>> getLikedVideos(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            // 可以抛出未登录异常，或者返回空列表
+             throw new RuntimeException("请先登录");
+        }
+        return Result.success(videoService.getLikedVideos(userId, page, size));
+    }
+
+    @Operation(summary = "获取当前用户收藏的视频列表")
+    @GetMapping("/favorited")
+    public Result<PageResult<VideoVO>> getFavoritedVideos(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+             throw new RuntimeException("请先登录");
+        }
+        return Result.success(videoService.getFavoritedVideos(userId, page, size));
+    }
+
     // ==================== 播放视频 ====================
 
 /*    @Operation(summary = "播放视频（记录播放行为）")

@@ -15,6 +15,11 @@ public class VideoVO {
     private Long commentCount;
     private Long shareCount;
     private Long favoriteCount;
+    @Schema(description = "是否已点赞")
+    private Boolean isLiked;
+
+    @Schema(description = "是否已收藏")
+    private Boolean isFavorited;
 
     @Schema(description = "视频描述")
     private String description;

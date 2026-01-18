@@ -36,4 +36,14 @@ public interface IVideoService {
      * 根据视频 ID 列表，获取推荐展示用的视频信息
      */
     List<RecommendVideoVO> getVideoRecommendVOs(List<Long> videoIds);
+
+    /**
+     * 获取用户点赞的视频列表
+     */
+    PageResult<VideoVO> getLikedVideos(Long userId, int page, int size);
+
+    /**
+     * 获取用户收藏的视频列表
+     */
+    PageResult<VideoVO> getFavoritedVideos(Long userId, int page, int size);
 }

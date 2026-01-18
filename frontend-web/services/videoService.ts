@@ -44,6 +44,7 @@ type VideoVO = {
   commentCount: number;
   shareCount: number;
   favoriteCount: number;
+  isLiked?: boolean;
   description?: string;
   uploaderId?: number;
   uploaderName?: string;
@@ -136,8 +137,8 @@ function mapVideoVOToVideo(item: VideoVO): Video {
       shares: item.shareCount ?? 0,
       views: item.playCount ?? 0,
     },
-    isLiked: false,
-    isBookmarked: false,
+    isLiked: Boolean((item as { isLiked?: unknown; liked?: unknown }).isLiked ?? (item as { liked?: unknown }).liked),
+    isBookmarked: Boolean((item as { isFavorited?: unknown; favorited?: unknown }).isFavorited ?? (item as { favorited?: unknown }).favorited),
     createdAt: new Date().toISOString(),
   };
 }
@@ -308,8 +309,15 @@ export async function getComments(
     { method: "GET" },
   );
 
+  const rawList = data?.list ?? [];
+  const list = rawList.map((c) => {
+    const maybe = c as Comment & { liked?: unknown; isLiked?: unknown };
+    const isLiked = Boolean(maybe.isLiked ?? maybe.liked);
+    return { ...c, isLiked };
+  });
+
   return {
-    list: data?.list ?? [],
+    list,
     total: data?.total ?? 0,
   };
 }
@@ -320,11 +328,65 @@ export async function getComments(
 // ============================================
 
 export async function toggleBookmarkVideo(
-  _request: BookmarkVideoRequest,
+  request: BookmarkVideoRequest,
 ): Promise<void> {
-  // OpenAPI 未提供 bookmark/收藏相关接口
-  void _request;
-  return;
+  const videoIdNum = Number(request.videoId);
+  if (!Number.isFinite(videoIdNum)) return;
+
+  const endpoint = request.isBookmarked
+    ? "/api/behavior/favorite"
+    : "/api/behavior/unfavorite";
+
+  await requestOpenApi<void>(endpoint, {
+    method: "POST",
+    body: JSON.stringify({ videoId: videoIdNum }),
+  });
+}
+
+export async function getLikedVideos(
+  page: number = 1,
+  size: number = 10,
+): Promise<{ list: Video[]; total: number }> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<VideoVO>>(
+    `/api/video/liked?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(data?.list) ? data.list : [];
+  const list = items.map(mapVideoVOToVideo);
+  
+  return {
+    list,
+    total: data?.total ?? 0,
+  };
+}
+
+export async function getFavoritedVideos(
+  page: number = 1,
+  size: number = 10,
+): Promise<{ list: Video[]; total: number }> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<VideoVO>>(
+    `/api/video/favorited?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(data?.list) ? data.list : [];
+  const list = items.map(mapVideoVOToVideo);
+  
+  return {
+    list,
+    total: data?.total ?? 0,
+  };
 }
 
 export async function toggleFollowUser(

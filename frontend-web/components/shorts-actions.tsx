@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bookmark, Heart, MessageCircle, Plus, Share2 } from "lucide-react";
@@ -35,6 +35,21 @@ export function ShortsActions({
   const [likesCount, setLikesCount] = useState(video.stats.likes);
   const [sharesCount, setSharesCount] = useState(video.stats.shares);
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
+
+  useEffect(() => {
+    setIsLiked(Boolean(video.isLiked));
+    setIsBookmarked(Boolean(video.isBookmarked));
+    setIsFollowing(Boolean(video.author.isFollowing));
+    setLikesCount(video.stats.likes);
+    setSharesCount(video.stats.shares);
+  }, [
+    video.id,
+    video.isLiked,
+    video.isBookmarked,
+    video.author.isFollowing,
+    video.stats.likes,
+    video.stats.shares,
+  ]);
 
   const handleLike = () => {
     const newLikedState = !isLiked;

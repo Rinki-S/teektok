@@ -3,7 +3,10 @@
 import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { getLikedVideos, getFavoritedVideos } from "@/services/videoService";
+import type { Video } from "@/types/video";
+import Link from "next/link";
+import { Play } from "lucide-react";
 
 type AuthUser = {
   userId: number;
@@ -22,10 +25,51 @@ const tabLabels: { key: TabKey; label: string }[] = [
   { key: "history", label: "观看历史" },
 ];
 
+function VideoGrid({ videos, emptyMessage }: { videos: Video[]; emptyMessage: string }) {
+  if (videos.length === 0) {
+    return <div className="py-12 text-center text-muted-foreground">{emptyMessage}</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      {videos.map((video) => (
+        <Link
+          key={video.id}
+          href={`/video/${video.id}`}
+          className="group relative aspect-[3/4] overflow-hidden bg-slate-100 rounded-sm"
+        >
+          {video.thumbnailUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={video.thumbnailUrl}
+              alt={video.title}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-slate-200 text-slate-400">
+              <Play className="h-8 w-8 opacity-50" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/10 opacity-0 transition-opacity group-hover:opacity-100" />
+          <div className="absolute bottom-1 left-1 right-1">
+             <div className="text-[10px] text-white/90 font-medium truncate drop-shadow-md">
+                {video.stats.views > 0 ? `${video.stats.views}次播放` : video.title}
+             </div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export default function MePage() {
   const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);
   const [activeTab, setActiveTab] = React.useState<TabKey>("works");
   const [isLoading, setIsLoading] = React.useState(true);
+  
+  const [likedVideos, setLikedVideos] = React.useState<Video[]>([]);
+  const [favoritedVideos, setFavoritedVideos] = React.useState<Video[]>([]);
+  const [isLoadingList, setIsLoadingList] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -43,6 +87,29 @@ export default function MePage() {
       setIsLoading(false);
     }
   }, []);
+
+  React.useEffect(() => {
+    if (!authUser) return;
+    
+    const fetchList = async () => {
+      setIsLoadingList(true);
+      try {
+        if (activeTab === "likes") {
+            const { list } = await getLikedVideos(1, 20);
+            setLikedVideos(list);
+        } else if (activeTab === "bookmarks") {
+            const { list } = await getFavoritedVideos(1, 20);
+            setFavoritedVideos(list);
+        }
+      } catch (e) {
+        console.error("Failed to load list", e);
+      } finally {
+        setIsLoadingList(false);
+      }
+    };
+
+    fetchList();
+  }, [authUser, activeTab]);
 
   if (isLoading) {
     return null;
@@ -135,13 +202,21 @@ export default function MePage() {
               value="likes"
               className="text-sm text-muted-foreground"
             >
-              暂无喜欢内容
+              {isLoadingList ? (
+                <div className="py-12 text-center">加载中...</div>
+              ) : (
+                <VideoGrid videos={likedVideos} emptyMessage="暂无喜欢内容" />
+              )}
             </TabsContent>
             <TabsContent
               value="bookmarks"
               className="text-sm text-muted-foreground"
             >
-              暂无收藏内容
+              {isLoadingList ? (
+                <div className="py-12 text-center">加载中...</div>
+              ) : (
+                <VideoGrid videos={favoritedVideos} emptyMessage="暂无收藏内容" />
+              )}
             </TabsContent>
             <TabsContent
               value="history"
