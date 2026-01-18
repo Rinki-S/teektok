@@ -11,4 +11,7 @@ public class CommentCreateDTO {
 
     @Schema(description = "评论内容", example = "这个视频很好看")
     private String content;
+
+    @Schema(description = "父评论ID (如果是回复评论)", example = "100")
+    private Long parentId;
 }

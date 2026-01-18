@@ -56,6 +56,25 @@ public class BehaviorController {
         return Result.success();
     }
 
+    @Operation(summary = "点赞评论")
+    @PostMapping("/comment/like")
+    public Result<Void> likeComment(@RequestBody BehaviorDTO dto) {
+        // 复用 BehaviorDTO，假设 videoId 字段用来传 commentId，或者前端传正确的 ID
+        // 注意：BehaviorDTO 只有 videoId。为了清晰，最好新建 CommentLikeDTO 或者复用但明确含义。
+        // 这里暂时假设前端传的 videoId 字段实际填的是 commentId（不推荐），或者我们扩展 BehaviorDTO。
+        // 更好的方式：创建一个通用的 ID DTO 或专门的 CommentLikeDTO。
+        // 为方便，我们假设 BehaviorDTO 的 videoId 在这里代表 commentId。
+        behaviorService.likeComment(dto.getVideoId(), getCurrentUserId());
+        return Result.success();
+    }
+
+    @Operation(summary = "取消点赞评论")
+    @PostMapping("/comment/unlike")
+    public Result<Void> unlikeComment(@RequestBody BehaviorDTO dto) {
+        behaviorService.unlikeComment(dto.getVideoId(), getCurrentUserId());
+        return Result.success();
+    }
+
     @Operation(summary = "转发视频")
     @PostMapping("/share")
     public Result<Void> share(@RequestBody ShareDTO dto) {

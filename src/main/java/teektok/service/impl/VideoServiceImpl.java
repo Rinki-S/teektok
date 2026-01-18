@@ -15,10 +15,12 @@ import teektok.dto.video.VideoListVO;
 import teektok.dto.video.VideoQueryDTO;
 import teektok.dto.video.VideoUploadDTO;
 import teektok.dto.video.VideoVO;
+import teektok.entity.User;
 import teektok.entity.UserBehavior;
 import teektok.entity.Video;
 import teektok.entity.VideoStat;
 import teektok.mapper.UserBehaviorMapper;
+import teektok.mapper.UserMapper;
 import teektok.mapper.VideoMapper;
 import teektok.mapper.VideoStatMapper;
 import teektok.service.IVideoService;
@@ -27,6 +29,7 @@ import teektok.utils.BaseContext;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -42,6 +45,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private VideoStatMapper videoStatMapper;
     @Autowired
     private UserBehaviorMapper userBehaviorMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
@@ -95,14 +100,38 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
                 .map(Video::getId)
                 .toList();
 
+        // 提取所有上传者ID
+        List<Long> uploaderIds = page.getRecords().stream()
+                .map(Video::getUploaderId)
+                .distinct()
+                .toList();
+        
+        // 批量查询用户信息
+        Map<Long, User> userMap;
+        if (!uploaderIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(uploaderIds);
+            userMap = users.stream().collect(Collectors.toMap(User::getId, Function.identity()));
+        } else {
+            userMap = Collections.emptyMap();
+        }
+
         // 3. 批量查询统计数据 (VideoStat 表) -> SELECT * FROM video_stat WHERE video_id IN (...)
-        List<VideoStat> stats = videoStatMapper.selectBatchIds(videoIds);
+        List<VideoStat> stats = videoIds.isEmpty() ? Collections.emptyList() : videoStatMapper.selectBatchIds(videoIds);
         // 4. 将统计数据转为 Map，key 是 videoId，value 是 VideoStat 对象，方便后续查找
         Map<Long, VideoStat> statMap = stats.stream()
                 .collect(Collectors.toMap(VideoStat::getVideoId, Function.identity()));
         // 5. 组装数据
         List<VideoVO> voList = page.getRecords().stream().map(video -> {
             VideoVO vo = toVO(video);
+
+            // 填充用户信息
+            User user = userMap.get(video.getUploaderId());
+            if (user != null) {
+                vo.setUploaderName(user.getUsername());
+                vo.setUploaderAvatar(user.getAvatar());
+            } else {
+                log.warn("Video {} has uploaderId {} but user not found in map", video.getId(), video.getUploaderId());
+            }
 
             // 从 Map 中获取对应的统计数据
             VideoStat stat = statMap.get(video.getId());
@@ -134,6 +163,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         vo.setTitle(video.getTitle());
         vo.setVideoUrl(video.getVideoUrl());
         vo.setCoverUrl(video.getCoverUrl());
+        vo.setDescription(video.getDescription());
+        vo.setUploaderId(video.getUploaderId());
         return vo;
     }
 
@@ -169,6 +200,15 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         }
         // 2. 转换 VO
         VideoVO vo = toVO(video);
+
+        // 填充用户信息
+        User user = userMapper.selectById(video.getUploaderId());
+        if (user != null) {
+            vo.setUploaderName(user.getUsername());
+            vo.setUploaderAvatar(user.getAvatar());
+        } else {
+            log.warn("Video {} has uploaderId {} but user not found in DB", videoId, video.getUploaderId());
+        }
 
         // 3. 补充统计数据
         VideoStat stat = videoStatMapper.selectOne(

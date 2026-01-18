@@ -53,5 +53,9 @@ export interface Comment {
   createTime: string;
   username: string;
   avatar?: string;
+  // Interaction
+  parentId?: string;
+  likeCount?: number;
+  isLiked?: boolean;
 }
 

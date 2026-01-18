@@ -13,6 +13,11 @@ public class CommentVO {
     private String username;
     private String avatar;
 
+    // Interaction
+    private Long parentId;
+    private Long likeCount;
+    private Boolean isLiked;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getVideoId() { return videoId; }
@@ -27,4 +32,10 @@ public class CommentVO {
     public void setUsername(String username) { this.username = username; }
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
+    public Long getParentId() { return parentId; }
+    public void setParentId(Long parentId) { this.parentId = parentId; }
+    public Long getLikeCount() { return likeCount; }
+    public void setLikeCount(Long likeCount) { this.likeCount = likeCount; }
+    public Boolean getIsLiked() { return isLiked; }
+    public void setIsLiked(Boolean isLiked) { this.isLiked = isLiked; }
 }

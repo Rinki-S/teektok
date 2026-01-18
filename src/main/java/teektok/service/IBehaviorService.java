@@ -42,4 +42,14 @@ public interface IBehaviorService {
      * 转发视频
      * */
     void share(Long videoId, Long userId);
+
+    /*
+     * 点赞评论
+     */
+    void likeComment(Long commentId, Long userId);
+
+    /*
+     * 取消点赞评论
+     */
+    void unlikeComment(Long commentId, Long userId);
 }

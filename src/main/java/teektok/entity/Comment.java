@@ -1,8 +1,6 @@
 package teektok.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -21,5 +19,16 @@ public class Comment {
 
     private Integer status;
 
+    /**
+     * 父评论ID (支持二级评论)
+     */
+    private Long parentId;
+
+    /**
+     * 点赞数
+     */
+    private Long likeCount;
+
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

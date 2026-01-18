@@ -15,4 +15,16 @@ public class VideoVO {
     private Long commentCount;
     private Long shareCount;
     private Long favoriteCount;
+
+    @Schema(description = "视频描述")
+    private String description;
+
+    @Schema(description = "上传者ID")
+    private Long uploaderId;
+
+    @Schema(description = "上传者昵称")
+    private String uploaderName;
+
+    @Schema(description = "上传者头像")
+    private String uploaderAvatar;
 }

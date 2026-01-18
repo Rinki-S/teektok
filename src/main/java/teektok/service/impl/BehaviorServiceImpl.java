@@ -13,6 +13,7 @@ import teektok.entity.*;
 import teektok.mapper.*;
 import teektok.service.BehaviorEventPubliser;
 import teektok.service.IBehaviorService;
+import teektok.utils.BaseContext;
 
 import java.time.LocalDateTime;
 
@@ -32,6 +33,8 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
     private VideoStatMapper videoStatMapper;
     @Autowired
     private CommentMapper commentMapper;
+    @Autowired
+    private CommentLikeMapper commentLikeMapper; // 新增
     @Autowired
     private VideoLikeMapper videoLikeMapper;       // 新增
     @Autowired
@@ -170,6 +173,7 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
         comment.setVideoId(dto.getVideoId());
         comment.setUserId(userId);
         comment.setContent(dto.getContent());
+        comment.setParentId(dto.getParentId()); // 设置 parentId
         comment.setStatus(0);
         comment.setCreateTime(LocalDateTime.now());
         commentMapper.insert(comment);
@@ -188,6 +192,7 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
         Page<Comment> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Comment> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Comment::getVideoId, videoId)
+                .orderByDesc(Comment::getLikeCount) // 按热度（点赞数）排序
                 .orderByDesc(Comment::getCreateTime);
 
         Page<Comment> commentPage = commentMapper.selectPage(pageParam, queryWrapper);
@@ -197,10 +202,14 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
             return new PageResult<>(voList, commentPage.getTotal());
         }
 
-        // 2. 收集用户ID
-        Set<Long> userIds = commentPage.getRecords().stream()
-                .map(Comment::getUserId)
-                .collect(Collectors.toSet());
+        // 2. 收集用户ID 和 评论ID
+        Set<Long> userIds = new HashSet<>();
+        List<Long> commentIds = new ArrayList<>();
+        
+        for (Comment comment : commentPage.getRecords()) {
+            userIds.add(comment.getUserId());
+            commentIds.add(comment.getId());
+        }
 
         // 3. 批量查询用户
         Map<Long, User> userMap = new HashMap<>();
@@ -209,10 +218,25 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
             userMap = users.stream().collect(Collectors.toMap(User::getId, Function.identity()));
         }
 
-        // 4. 组装 VO
+        // 4. 批量查询当前用户的点赞状态 (仅当用户已登录时)
+        Set<Long> likedCommentIds = new HashSet<>();
+        Long currentUserId = BaseContext.getCurrentId(); // 可能为 null 如果未登录
+        if (currentUserId != null && !commentIds.isEmpty()) {
+            List<CommentLike> likes = commentLikeMapper.selectList(new LambdaQueryWrapper<CommentLike>()
+                    .eq(CommentLike::getUserId, currentUserId)
+                    .in(CommentLike::getCommentId, commentIds));
+            likedCommentIds = likes.stream().map(CommentLike::getCommentId).collect(Collectors.toSet());
+        }
+
+        // 5. 组装 VO
         for (Comment comment : commentPage.getRecords()) {
             CommentVO vo = new CommentVO();
             BeanUtils.copyProperties(comment, vo);
+            
+            // 填充点赞信息
+            vo.setLikeCount(comment.getLikeCount() == null ? 0 : comment.getLikeCount());
+            vo.setIsLiked(likedCommentIds.contains(comment.getId()));
+            vo.setParentId(comment.getParentId());
 
             User user = userMap.get(comment.getUserId());
             if (user != null) {
@@ -225,6 +249,39 @@ public class BehaviorServiceImpl extends ServiceImpl<UserBehaviorMapper, UserBeh
         }
 
         return new PageResult<>(voList, commentPage.getTotal());
+    }
+
+    @Override
+    public void likeComment(Long commentId, Long userId) {
+        // 1. 查是否存在
+        boolean exists = commentLikeMapper.exists(new LambdaQueryWrapper<CommentLike>()
+                .eq(CommentLike::getCommentId, commentId)
+                .eq(CommentLike::getUserId, userId));
+
+        if (!exists) {
+            // 2. 插入点赞记录
+            CommentLike like = new CommentLike();
+            like.setUserId(userId);
+            like.setCommentId(commentId);
+            like.setCreateTime(LocalDateTime.now());
+            commentLikeMapper.insert(like);
+
+            // 3. 统计数 +1
+            commentMapper.incrLikeCount(commentId, 1);
+        }
+    }
+
+    @Override
+    public void unlikeComment(Long commentId, Long userId) {
+        // 1. 删除记录
+        int rows = commentLikeMapper.delete(new LambdaQueryWrapper<CommentLike>()
+                .eq(CommentLike::getCommentId, commentId)
+                .eq(CommentLike::getUserId, userId));
+
+        if (rows > 0) {
+            // 2. 统计数 -1
+            commentMapper.incrLikeCount(commentId, -1);
+        }
     }
 
     @Override

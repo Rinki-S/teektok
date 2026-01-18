@@ -44,6 +44,10 @@ type VideoVO = {
   commentCount: number;
   shareCount: number;
   favoriteCount: number;
+  description?: string;
+  uploaderId?: number;
+  uploaderName?: string;
+  uploaderAvatar?: string;
 };
 
 function joinUrl(baseUrl: string, path: string) {
@@ -119,11 +123,11 @@ function mapVideoVOToVideo(item: VideoVO): Video {
     videoUrl: item.videoUrl || "/vid.mp4",
     thumbnailUrl: item.coverUrl || "/vid.mp4",
     title: item.title ?? `视频 ${id}`,
-    description: "",
+    description: item.description || "",
     author: {
-      id: "unknown",
-      username: "unknown",
-      avatarUrl: undefined,
+      id: item.uploaderId ? String(item.uploaderId) : "unknown",
+      username: item.uploaderName || "unknown",
+      avatarUrl: item.uploaderAvatar,
       isFollowing: false,
     },
     stats: {
@@ -240,13 +244,44 @@ export async function shareVideo(videoId: string): Promise<void> {
 export async function createComment(
   videoId: string,
   content: string,
+  parentId?: string,
 ): Promise<void> {
   const videoIdNum = Number(videoId);
   if (!Number.isFinite(videoIdNum)) return;
 
+  const payload: { videoId: number; content: string; parentId?: number } = {
+    videoId: videoIdNum,
+    content,
+  };
+  if (parentId) {
+    payload.parentId = Number(parentId);
+  }
+
   await requestOpenApi<void>("/api/behavior/comment", {
     method: "POST",
-    body: JSON.stringify({ videoId: videoIdNum, content }),
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * 评论点赞/取消点赞
+ */
+export async function toggleLikeComment(
+  commentId: string,
+  isLiked: boolean,
+): Promise<void> {
+  const commentIdNum = Number(commentId);
+  if (!Number.isFinite(commentIdNum)) return;
+
+  // 使用 BehaviorDTO 的 videoId 字段传递 commentId (后端复用逻辑)
+  // endpoint: /api/behavior/comment/like or /unlike
+  const endpoint = isLiked
+    ? "/api/behavior/comment/like"
+    : "/api/behavior/comment/unlike";
+
+  await requestOpenApi<void>(endpoint, {
+    method: "POST",
+    body: JSON.stringify({ videoId: commentIdNum }),
   });
 }
 

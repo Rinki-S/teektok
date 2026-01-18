@@ -321,13 +321,20 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
       </motion.div>
 
       {/* 视频信息（左下角） */}
-      <div className="absolute bottom-20 left-4 right-24 text-white z-10">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="font-bold">@{video.author.username}</span>
+      <div className="absolute bottom-12 left-4 right-24 text-white z-10 pointer-events-none">
+        <div className="space-y-2 pointer-events-auto">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-bold text-lg drop-shadow-md">
+              @{video.author.username}
+            </span>
           </div>
+          <h3 className="font-bold text-base mb-1 drop-shadow-md">
+            {video.title}
+          </h3>
           {video.description && (
-            <p className="text-sm line-clamp-2">{video.description}</p>
+            <p className="text-sm line-clamp-2 text-gray-100 drop-shadow-md">
+              {video.description}
+            </p>
           )}
         </div>
       </div>
