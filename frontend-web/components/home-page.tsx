@@ -5,7 +5,11 @@ import { useShortsNav } from "@/components/shorts-nav-context";
 import { useVideoFeed } from "@/hooks/use-video-feed";
 import { VideoFeed, type VideoFeedHandle } from "@/components/video-feed";
 
-export function HomePage() {
+export function HomePage({
+  feedType = "default",
+}: {
+  feedType?: "default" | "recommend" | "hot";
+}) {
   const {
     videos,
     isLoading,
@@ -15,7 +19,7 @@ export function HomePage() {
     handleFollow,
     handleShare,
     handleComment,
-  } = useVideoFeed();
+  } = useVideoFeed(undefined, feedType);
 
   const { setState: setNavState, reset: resetNav } = useShortsNav();
   const [currentIndex, setCurrentIndex] = useState(0);
