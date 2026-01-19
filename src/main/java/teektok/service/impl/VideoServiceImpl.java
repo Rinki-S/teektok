@@ -21,12 +21,14 @@ import teektok.entity.Video;
 import teektok.entity.VideoFavorite;
 import teektok.entity.VideoLike;
 import teektok.entity.VideoStat;
+import teektok.entity.Relation;
 import teektok.mapper.UserBehaviorMapper;
 import teektok.mapper.UserMapper;
 import teektok.mapper.VideoFavoriteMapper;
 import teektok.mapper.VideoLikeMapper;
 import teektok.mapper.VideoMapper;
 import teektok.mapper.VideoStatMapper;
+import teektok.mapper.RelationMapper;
 import teektok.service.IVideoService;
 import teektok.utils.AliyunOSSOperator;
 import teektok.utils.BaseContext;
@@ -57,6 +59,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private VideoLikeMapper videoLikeMapper;
     @Autowired
     private VideoFavoriteMapper videoFavoriteMapper;
+    @Autowired
+    private RelationMapper relationMapper;
 
     @Override
     public void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
@@ -93,6 +97,16 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         video.setUpdateTime(LocalDateTime.now());
 
         this.save(video);
+
+        // 初始化视频统计数据
+        VideoStat stat = new VideoStat();
+        stat.setVideoId(video.getId());
+        stat.setPlayCount(0L);
+        stat.setLikeCount(0L);
+        stat.setCommentCount(0L);
+        stat.setShareCount(0L);
+        stat.setFavoriteCount(0L);
+        videoStatMapper.insert(stat);
     }
 
     @Override
@@ -155,6 +169,18 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         }
         Set<Long> favoritedVideoIds = tempFavoritedVideoIds;
 
+        // 4.6 批量查询关注状态
+        Set<Long> tempFollowedUploaderIds;
+        if (currentUserId != null && !uploaderIds.isEmpty()) {
+            List<Relation> relations = relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                    .eq(Relation::getUserId, currentUserId)
+                    .in(Relation::getTargetId, uploaderIds));
+            tempFollowedUploaderIds = relations.stream().map(Relation::getTargetId).collect(Collectors.toSet());
+        } else {
+            tempFollowedUploaderIds = Collections.emptySet();
+        }
+        Set<Long> followedUploaderIds = tempFollowedUploaderIds;
+
         // 5. 组装数据
         List<VideoVO> voList = page.getRecords().stream().map(video -> {
             VideoVO vo = toVO(video);
@@ -186,6 +212,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
             }
             vo.setIsLiked(likedVideoIds.contains(video.getId()));
             vo.setIsFavorited(favoritedVideoIds.contains(video.getId()));
+            vo.setIsFollowed(followedUploaderIds.contains(video.getUploaderId()));
             return vo;
         }).toList();
         // 返回分页结果
@@ -266,6 +293,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         Long currentUserId = BaseContext.getCurrentId();
         boolean isLiked = false;
         boolean isFavorited = false;
+        boolean isFollowed = false;
         if (currentUserId != null) {
             isLiked = videoLikeMapper.exists(new LambdaQueryWrapper<VideoLike>()
                     .eq(VideoLike::getUserId, currentUserId)
@@ -273,9 +301,13 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
             isFavorited = videoFavoriteMapper.exists(new LambdaQueryWrapper<VideoFavorite>()
                     .eq(VideoFavorite::getUserId, currentUserId)
                     .eq(VideoFavorite::getVideoId, videoId));
+            isFollowed = relationMapper.exists(new LambdaQueryWrapper<Relation>()
+                    .eq(Relation::getUserId, currentUserId)
+                    .eq(Relation::getTargetId, video.getUploaderId()));
         }
         vo.setIsLiked(isLiked);
         vo.setIsFavorited(isFavorited);
+        vo.setIsFollowed(isFollowed);
         return vo;
     }
 
@@ -365,6 +397,18 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         Set<Long> likedVideoIds = tempLikedVideoIds;
         Set<Long> favoritedVideoIds = tempFavoritedVideoIds;
 
+        // 4.5 批量查询关注状态
+        Set<Long> tempFollowedUploaderIds;
+        if (currentUserId != null && !uploaderIds.isEmpty()) {
+            List<Relation> relations = relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                    .eq(Relation::getUserId, currentUserId)
+                    .in(Relation::getTargetId, uploaderIds));
+            tempFollowedUploaderIds = relations.stream().map(Relation::getTargetId).collect(Collectors.toSet());
+        } else {
+            tempFollowedUploaderIds = Collections.emptySet();
+        }
+        Set<Long> followedUploaderIds = tempFollowedUploaderIds;
+
         // 5. 组装 VO
         List<VideoVO> voList = orderedVideos.stream().map(video -> {
             VideoVO vo = toVO(video);
@@ -391,6 +435,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
             }
             vo.setIsLiked(likedVideoIds.contains(video.getId()));
             vo.setIsFavorited(favoritedVideoIds.contains(video.getId()));
+            vo.setIsFollowed(followedUploaderIds.contains(video.getUploaderId()));
             return vo;
         }).toList();
 

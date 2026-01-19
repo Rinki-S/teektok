@@ -21,6 +21,9 @@ public class VideoVO {
     @Schema(description = "是否已收藏")
     private Boolean isFavorited;
 
+    @Schema(description = "是否已关注作者")
+    private Boolean isFollowed;
+
     @Schema(description = "视频描述")
     private String description;
 

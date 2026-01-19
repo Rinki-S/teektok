@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { getFriendList } from "@/services/videoService";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 const AUTH_STORAGE_KEY = "teektok.auth";
 
@@ -11,9 +14,16 @@ type AuthUser = {
   token: string;
 };
 
+type UserVO = {
+  id: number;
+  username: string;
+  avatar?: string;
+};
+
 export default function FriendsPage() {
   const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [friendList, setFriendList] = React.useState<UserVO[]>([]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -31,6 +41,14 @@ export default function FriendsPage() {
       setIsLoading(false);
     }
   }, []);
+
+  React.useEffect(() => {
+    if (authUser) {
+      getFriendList()
+        .then((data) => setFriendList(data))
+        .catch((err) => console.error("Failed to load friend list", err));
+    }
+  }, [authUser]);
 
   if (isLoading) {
     return null;
@@ -63,32 +81,56 @@ export default function FriendsPage() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-sidebar">
-      <div className="flex w-full flex-col gap-2 p-6">
-        <h1 className="text-xl font-semibold text-foreground">朋友</h1>
-        <p className="text-sm text-muted-foreground">
-          这是“朋友”页面的独立路由。你可以在这里放好友动态、共同关注、推荐关注等内容。
-        </p>
-
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link
-            href="/"
-            className="rounded-lg bg-neutral-700 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-600 transition-colors"
-          >
-            返回精选(首页)
-          </Link>
-          <Link
-            href="/following"
-            className="rounded-lg bg-neutral-700 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-600 transition-colors"
-          >
-            去关注
-          </Link>
+      <div className="flex w-full flex-col gap-4 p-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-foreground">朋友列表 (互相关注)</h1>
+          <div className="flex gap-2">
+            <Link
+              href="/"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              返回首页
+            </Link>
+            <span className="text-muted-foreground">|</span>
+            <Link
+              href="/following"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              去关注
+            </Link>
+          </div>
         </div>
-      </div>
 
-      <div className="flex min-h-0 flex-1 items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">朋友内容区域（待实现）</p>
-        </div>
+        {friendList.length === 0 ? (
+          <div className="mt-10 text-center text-muted-foreground">
+            <p>暂时没有朋友 (互相关注的用户)</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {friendList.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user.avatar} alt={user.username} />
+                    <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="truncate text-sm font-medium text-card-foreground">
+                      {user.username}
+                    </span>
+                    <span className="text-xs text-muted-foreground">ID: {user.id}</span>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" disabled>
+                  朋友
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

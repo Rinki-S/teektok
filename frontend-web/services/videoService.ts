@@ -49,6 +49,14 @@ type VideoVO = {
   uploaderId?: number;
   uploaderName?: string;
   uploaderAvatar?: string;
+  isFollowed?: boolean;
+};
+
+type UserVO = {
+  id: number;
+  username: string;
+  avatar?: string;
+  // 其他字段视后端返回而定
 };
 
 function joinUrl(baseUrl: string, path: string) {
@@ -129,7 +137,7 @@ function mapVideoVOToVideo(item: VideoVO): Video {
       id: item.uploaderId ? String(item.uploaderId) : "unknown",
       username: item.uploaderName || "unknown",
       avatarUrl: item.uploaderAvatar,
-      isFollowing: false,
+      isFollowing: Boolean(item.isFollowed),
     },
     stats: {
       likes: item.likeCount ?? 0,
@@ -390,9 +398,37 @@ export async function getFavoritedVideos(
 }
 
 export async function toggleFollowUser(
-  _request: FollowUserRequest,
+  request: FollowUserRequest,
 ): Promise<void> {
-  // OpenAPI 未提供 follow/关注相关接口
-  void _request;
-  return;
+  const targetIdNum = Number(request.userId);
+  if (!Number.isFinite(targetIdNum)) return;
+
+  // actionType: 1=关注, 2=取消关注
+  const actionType = request.isFollowing ? 1 : 2;
+
+  await requestOpenApi<void>("/api/relation/action", {
+    method: "POST",
+    body: JSON.stringify({ targetId: targetIdNum, actionType }),
+  });
+}
+
+export async function getFollowList(): Promise<UserVO[]> {
+  const data = await requestOpenApi<UserVO[]>("/api/relation/follow/list", {
+    method: "GET",
+  });
+  return data || [];
+}
+
+export async function getFollowerList(): Promise<UserVO[]> {
+  const data = await requestOpenApi<UserVO[]>("/api/relation/follower/list", {
+    method: "GET",
+  });
+  return data || [];
+}
+
+export async function getFriendList(): Promise<UserVO[]> {
+  const data = await requestOpenApi<UserVO[]>("/api/relation/friend/list", {
+    method: "GET",
+  });
+  return data || [];
 }
