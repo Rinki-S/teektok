@@ -3,6 +3,7 @@ package teektok.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
@@ -14,6 +15,7 @@ import teektok.utils.JwtUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -21,6 +23,9 @@ public class UserServiceImpl implements IUserService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @Override
     public void register(UserRegisterDTO userRegisterDTO) {
@@ -75,4 +80,5 @@ public class UserServiceImpl implements IUserService {
         userLoginVO.setToken(token);
         return  userLoginVO;
     }
+
 }

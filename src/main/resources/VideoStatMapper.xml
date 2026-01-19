@@ -1,0 +1,11 @@
+<update id="batchUpdateStat">
+    UPDATE video_stat
+    SET ${field} = ${field} +
+    <foreach collection="stats" item="value" index="key" separator=" " open="CASE video_id" close="END">
+        WHEN #{key} THEN #{value}
+    </foreach>
+    WHERE video_id IN
+    <foreach collection="stats" item="value" index="key" separator="," open="(" close=")">
+        #{key}
+    </foreach>
+</update>
