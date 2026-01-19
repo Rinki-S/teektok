@@ -2,15 +2,14 @@ package teektok.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import teektok.dto.commen.Result;
 import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
+import teektok.dto.user.UserMeVO;
 import teektok.dto.user.UserRegisterDTO;
 import teektok.service.IUserService;
+import teektok.utils.BaseContext;
 
 @RestController
 @RequestMapping("/api/user")
@@ -34,6 +33,19 @@ public class UserController {
     @PostMapping("/login")
     public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO) {
         UserLoginVO vo = userService.login(userLoginDTO);
+        return Result.success(vo);
+    }
+
+    @Operation(summary = "获取当前用户信息")
+    @GetMapping("/me")
+    public Result<UserMeVO> getMyInfo() {
+        // 从拦截器解析出的上下文中获取当前登录用户ID
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.fail(401,"未登录");
+        }
+
+        UserMeVO vo = userService.getMyInfo(userId);
         return Result.success(vo);
     }
 

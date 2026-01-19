@@ -6,14 +6,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
+import teektok.dto.user.UserMeVO;
 import teektok.dto.user.UserRegisterDTO;
+import teektok.entity.Relation;
 import teektok.entity.User;
+import teektok.entity.Video;
+import teektok.mapper.RelationMapper;
 import teektok.mapper.UserMapper;
+import teektok.mapper.VideoMapper;
 import teektok.service.IUserService;
 import teektok.utils.JwtUtils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -21,6 +28,10 @@ public class UserServiceImpl implements IUserService {
 
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private RelationMapper relationMapper;
+    @Autowired
+    private VideoMapper videoMapper;
 
     @Override
     public void register(UserRegisterDTO userRegisterDTO) {
@@ -74,5 +85,47 @@ public class UserServiceImpl implements IUserService {
         userLoginVO.setUserId(user.getId());
         userLoginVO.setToken(token);
         return  userLoginVO;
+    }
+
+    @Override
+    public UserMeVO getMyInfo(Long userId) {
+
+        // 1. 查询基础信息
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        UserMeVO vo = new UserMeVO();
+        vo.setId(user.getId());
+        vo.setUsername(user.getUsername());
+        vo.setAvatar(user.getAvatar());
+
+        // 2. 查询关注数量 (userId 为关注者)
+        Long followingCount = relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
+                .eq(Relation::getUserId, userId));
+        vo.setFollowingCount(followingCount);
+
+        // 3. 查询粉丝数量 (userId 为被关注对象)
+        Long followerCount = relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
+                .eq(Relation::getTargetId, userId));
+        vo.setFollowerCount(followerCount);
+
+        // 4. 查询作品URL列表
+        List<Video> videos = videoMapper.selectList(new LambdaQueryWrapper<Video>()
+                .eq(Video::getUploaderId, userId)
+                .orderByDesc(Video::getCreateTime));
+
+        List<String> videoUrls = videos.stream()
+                .map(Video::getVideoUrl)
+                .collect(Collectors.toList());
+        vo.setVideoUrls(videoUrls);
+
+        //5. 查询作品封面URL列表
+        List<String> videoCoverUrls = videos.stream()
+                .map(Video::getCoverUrl)
+                .collect(Collectors.toList());
+        vo.setVideoCoverUrls(videoCoverUrls);
+        return vo;
     }
 }
