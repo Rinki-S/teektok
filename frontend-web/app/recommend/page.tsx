@@ -1,13 +1,28 @@
 "use client";
 
+import { useEffect } from "react";
+import { toast } from "sonner";
 import { HomePage } from "@/components/home-page";
+import { getCurrentUserId } from "@/services/videoService";
 
-/**
- * 推荐页
- *
- * 目前先复用短视频流 UI（`HomePage`），以便你把左侧导航的每个入口先拆成独立路由。
- * 后续你可以在 `useVideoFeed` 里按 route/参数区分拉取“推荐”数据。
- */
 export default function RecommendPage() {
-  return <HomePage />;
+  useEffect(() => {
+    // 如果未登录，提示用户
+    if (!getCurrentUserId()) {
+      toast("请先登录", {
+        description: "登录后即可查看个性化推荐内容",
+        action: {
+          label: "去登录",
+          onClick: () => {
+             // 跳转到登录页 (假设登录页是 /admin/login 或弹窗，暂时不做跳转或跳到 admin 登录)
+             // 由于前台登录入口暂未明确，这里先提示
+             // router.push("/login"); 
+             console.log("Navigate to login");
+          },
+        },
+      });
+    }
+  }, []);
+
+  return <HomePage feedType="recommend" />;
 }

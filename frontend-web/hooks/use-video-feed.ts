@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import type { Video } from "@/types/video";
 import {
   getVideoFeed,
+  getRecommendFeed,
+  getHotFeed,
+  getCurrentUserId,
   getVideoById,
   toggleLikeVideo,
   toggleBookmarkVideo,
@@ -26,7 +29,10 @@ interface UseVideoFeedReturn {
   loadMoreVideos: () => Promise<void>;
 }
 
-export function useVideoFeed(initialVideoId?: string): UseVideoFeedReturn {
+export function useVideoFeed(
+  initialVideoId?: string,
+  feedType: "default" | "recommend" | "hot" = "default"
+): UseVideoFeedReturn {
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +67,22 @@ export function useVideoFeed(initialVideoId?: string): UseVideoFeedReturn {
         setHasMore(false);
       } else {
         // 列表模式
-        const response = await getVideoFeed(undefined, 10);
+        let response;
+        if (feedType === "recommend") {
+          const userId = getCurrentUserId();
+          if (userId) {
+            response = await getRecommendFeed(userId);
+          } else {
+            // 未登录则回退到热门列表（之前是默认列表，现在统一用热门）
+            response = await getHotFeed();
+          }
+        } else if (feedType === "hot") {
+          response = await getHotFeed();
+        } else {
+          // 默认为 video feed
+          response = await getVideoFeed(undefined, 10);
+        }
+
         setVideos(response.videos);
         setNextCursor(response.nextCursor);
         setHasMore(response.hasMore);

@@ -152,6 +152,32 @@ function mapVideoVOToVideo(item: VideoVO): Video {
 }
 
 // ============================================
+// Token 解析
+// ============================================
+
+export function getCurrentUserId(): string | null {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+    const decoded = JSON.parse(jsonPayload);
+    return decoded.userId ? String(decoded.userId) : null;
+  } catch (e) {
+    console.error("Failed to parse token:", e);
+    return null;
+  }
+}
+
+// ============================================
 // OpenAPI 对齐：视频列表（用来驱动 feed）
 // - GET /api/video/list?page=1&size=10
 // ============================================
@@ -184,6 +210,64 @@ export async function getVideoFeed(
     videos,
     nextCursor: hasMore ? String(page + 1) : undefined,
     hasMore,
+  };
+}
+
+export async function getRecommendFeed(userId: string): Promise<VideoListResponse> {
+  // GET /api/recommend/{userId}
+  const data = await requestOpenApi<VideoVO[]>(`/api/recommend/${userId}`, {
+    method: "GET",
+  });
+
+  // RecommendVideoVO in backend uses 'id' instead of 'videoId', and missing some fields.
+  // We need to map it carefully. 
+  // Ideally backend should return consistent VO. For now we map what we have.
+  const items = Array.isArray(data) ? data : [];
+  
+  const videos = items.map(item => {
+    // Adapter for RecommendVideoVO which might use 'id' instead of 'videoId'
+    const videoId = (item as any).id || item.videoId;
+    
+    // Construct a VideoVO compatible object
+    const vo: VideoVO = {
+        ...item,
+        videoId: videoId,
+        // RecommendVideoVO has 'id', 'title', 'videoUrl', 'coverUrl', 'likeCount', 'commentCount', 'favoriteCount', 'shareCount'
+        // It might be missing uploader info.
+    };
+    return mapVideoVOToVideo(vo);
+  });
+
+  return {
+    videos,
+    nextCursor: undefined, // No pagination for recommend feed currently
+    hasMore: false,
+  };
+}
+
+export async function getHotFeed(): Promise<VideoListResponse> {
+  // GET /api/recommend/hot
+  const data = await requestOpenApi<VideoVO[]>(`/api/recommend/hot`, {
+    method: "GET",
+  });
+
+  const items = Array.isArray(data) ? data : [];
+  
+  const videos = items.map(item => {
+    // Adapter for RecommendVideoVO
+    const videoId = (item as any).id || item.videoId;
+    
+    const vo: VideoVO = {
+        ...item,
+        videoId: videoId,
+    };
+    return mapVideoVOToVideo(vo);
+  });
+
+  return {
+    videos,
+    nextCursor: undefined, // No pagination for hot feed currently
+    hasMore: false,
   };
 }
 

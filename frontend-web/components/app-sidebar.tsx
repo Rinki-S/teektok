@@ -26,19 +26,14 @@ import { usePathname } from "next/navigation";
 
 const itemsRecommend = [
   {
-    title: "精选",
-    url: "/",
-    icon: ThumbsUp,
+    title: "热门",
+    url: "/trending",
+    icon: TrendingUp,
   },
   {
     title: "推荐",
     url: "/recommend",
     icon: Sparkles,
-  },
-  {
-    title: "热门",
-    url: "/trending",
-    icon: TrendingUp,
   },
 ];
 
