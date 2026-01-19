@@ -47,20 +47,10 @@ public class KafkaBehaviorEventPubliser implements BehaviorEventPubliser {
         sendBehaviorMap(videoId, userId, TYPE_LIKE, null);
     }
 
-/*    @Override
-    public void publishUnlikeEvent(Long videoId, Long userId) {
-        sendSimpleEvent("UNLIKE", videoId, userId, null);
-    }*/
-
     @Override
     public void publishFavoriteEvent(Long videoId, Long userId) {
         sendBehaviorMap(videoId, userId, TYPE_COLLECT, null);
     }
-
-/*    @Override
-    public void publishUnfavoriteEvent(Long videoId, Long userId) {
-        sendSimpleEvent("UNCOLLECT", videoId, userId, null);
-    }*/
 
     @Override
     public void publishCommentEvent(Long videoId, Long userId, String content) {
@@ -77,7 +67,7 @@ public class KafkaBehaviorEventPubliser implements BehaviorEventPubliser {
     /**
      * 构建并发送符合 Spark 要求的 Map 结构
      * Kafka 的 JsonSerializer 会自动把它变成 JSON:
-     * { "userId": 1001, "movieId": 2005, "createDate": }
+     * { "id": 1, "userId": 1001, "movieId": 2005, "createDate": }
      */
     private void sendBehaviorMap(Long videoId, Long userId, Integer type, String content) {
         Map<String, Object> message = new HashMap<>();

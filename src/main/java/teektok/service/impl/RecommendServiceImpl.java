@@ -3,6 +3,7 @@ package teektok.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.dto.recommend.RecommendVideoVO;
@@ -16,6 +17,7 @@ import teektok.service.IRecommendService;
 
 
 import java.util.*;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -45,7 +47,7 @@ public class RecommendServiceImpl implements IRecommendService {
         String cacheKey = REDIS_KEY_PREFIX + (userId == null ? "guest" : userId);
 
         // ================== 1. 查询 Redis 缓存 ==================
-        //TODO:优先从redis中查询推荐列表
+        //优先从redis中查询推荐列表
         try {
             // 尝试从缓存获取
             List<RecommendVideoVO> cachedList = (List<RecommendVideoVO>) redisTemplate.opsForValue().get(cacheKey);

@@ -5,6 +5,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 import teektok.entity.VideoStat;
 
+import java.util.Map;
+
 @Mapper
 public interface VideoStatMapper extends BaseMapper<VideoStat> {
     // 乐观锁/原子更新：增加点赞数
@@ -36,4 +38,8 @@ public interface VideoStatMapper extends BaseMapper<VideoStat> {
             "VALUES (#{videoId}, 0, 0, #{num}, 0, 0) " +
             "ON DUPLICATE KEY UPDATE comment_count = comment_count + #{num}")
     void incrCommentCount(@Param("videoId") Long videoId, @Param("num") int num);
+
+    // 使用 Case When 语法进行批量更新
+    // 示例 SQL: UPDATE video_stat SET play_count = play_count + CASE video_id WHEN 1 THEN 10 WHEN 2 THEN 5 END WHERE video_id IN (1, 2)
+    void batchUpdateStat(@Param("stats") Map<Long, Integer> stats, @Param("field") String field);
 }
