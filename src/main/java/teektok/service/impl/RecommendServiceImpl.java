@@ -162,6 +162,10 @@ public class RecommendServiceImpl implements IRecommendService {
      * 内部辅助方法：根据 ID 列表组装完整数据
      */
     private List<RecommendVideoVO> buildVOs(List<Long> videoIds) {
+        if (videoIds == null || videoIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         // A. 批量查视频基本信息
         List<Video> videos = videoMapper.selectBatchIds(videoIds);
         Map<Long, Video> videoMap = videos.stream()
