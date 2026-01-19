@@ -2,10 +2,12 @@ package teektok.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import teektok.VO.PageResult;
 import teektok.dto.audit.AdminLoginDTO;
 import teektok.dto.audit.AdminLoginVO;
 import teektok.dto.audit.VideoAuditDTO;
@@ -116,6 +118,18 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
         // TODO: 后续可以继续在这里删除 user_behavior 表中关于该视频的记录
         // userBehaviorMapper.delete(new LambdaQueryWrapper<UserBehavior>().eq(UserBehavior::getVideoId, videoId));
+    }
+
+    @Override
+    public PageResult<User> getUserList(Integer page, Integer pageSize) {
+        // 1. 创建 MyBatis-Plus 分页对象
+        Page<User> pageInfo = new Page<>(page, pageSize);
+
+        // 2. 执行查询
+        userMapper.selectPage(pageInfo, null);
+
+        // 3. 封装为项目通用的 PageResult 并返回
+        return new PageResult<>(pageInfo.getRecords(), pageInfo.getTotal());
     }
 }
 

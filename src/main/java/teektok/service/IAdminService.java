@@ -1,8 +1,10 @@
 package teektok.service;
 
+import teektok.VO.PageResult;
 import teektok.dto.audit.AdminLoginDTO;
 import teektok.dto.audit.AdminLoginVO;
 import teektok.dto.audit.VideoAuditDTO;
+import teektok.entity.User;
 
 public interface IAdminService {
     /**
@@ -29,4 +31,13 @@ public interface IAdminService {
      * 删除视频（逻辑删除）
      */
     void deleteVideo(Long videoId);
+
+
+    /**
+     * 分页查询用户列表
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
+    PageResult<User> getUserList(Integer page, Integer pageSize);
 }

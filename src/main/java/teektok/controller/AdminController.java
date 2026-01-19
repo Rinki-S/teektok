@@ -4,8 +4,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import teektok.VO.PageResult;
 import teektok.dto.audit.*;
 import teektok.dto.commen.Result;
+import teektok.entity.User;
 import teektok.service.IAdminService;
 
 @Tag(name = "管理员模块")
@@ -56,5 +58,16 @@ public class AdminController {
     public Result<Void> deleteVideo(@PathVariable("videoId") Long videoId) {
         adminService.deleteVideo(videoId);
         return Result.success();
+    }
+
+
+    @Operation(summary = "获取用户列表")
+    @GetMapping("/user/list")
+    public Result<PageResult<User>> getUserList(
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
+    ) {
+        PageResult<User> result = adminService.getUserList(page, pageSize);
+        return Result.success(result);
     }
 }

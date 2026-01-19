@@ -117,8 +117,11 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         int size = (dto.getSize() != null) ? dto.getSize() : 10;
         Page<Video> page = new Page<>(current, size);
 
-        // 执行分页查询
-        this.lambdaQuery().orderByDesc(Video::getCreateTime).page(page);
+        LambdaQueryWrapper<Video> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(Video::getCreateTime);
+
+        // 执行分页查询，此时 MyBatis-Plus 会将 count 结果写回 page 对象
+        this.page(page, queryWrapper);
         //提取所有视频id
         List<Long> videoIds = page.getRecords().stream()
                 .map(Video::getId)
