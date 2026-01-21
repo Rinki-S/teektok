@@ -43,6 +43,7 @@ public class UserServiceImpl implements IUserService {
     private VideoMapper videoMapper;
     @Autowired
     private VideoStatMapper videoStatMapper;
+    @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
     private static final String USER_INFO_KEY = "user:info:";

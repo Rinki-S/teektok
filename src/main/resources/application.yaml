@@ -40,6 +40,8 @@ spring:
 
 # MyBatis Plus 配置
 mybatis-plus:
+  # 告诉 MyBatis 去哪里找 XML 文件
+  mapper-locations: classpath:mapper/*.xml
   configuration:
     # 开启控制台 SQL 日志打印 (开发环境推荐开启，生产环境建议关闭)
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="teektok.mapper.CommentMapper">
+    <update id="batchUpdateLikeCount">
+        UPDATE comment
+        SET like_count = like_count +
+        <foreach collection="stats" item="value" index="key" separator=" " open="CASE id" close="END">
+            WHEN #{key} THEN #{value}
+        </foreach>
+        WHERE id IN
+        <foreach collection="stats" item="value" index="key" separator="," open="(" close=")">
+            #{key}
+        </foreach>
+    </update>
+</mapper>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="teektok.mapper.VideoStatMapper">
+    <update id="batchUpdateStat">
+        UPDATE video_stat
+        SET ${field} = ${field} +
+        <foreach collection="stats" item="value" index="key" separator=" " open="CASE video_id" close="END">
+            WHEN #{key} THEN #{value}
+        </foreach>
+        WHERE video_id IN
+        <foreach collection="stats" item="value" index="key" separator="," open="(" close=")">
+            #{key}
+        </foreach>
+    </update>
+</mapper>
