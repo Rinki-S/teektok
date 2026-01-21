@@ -8,6 +8,7 @@ import teektok.dto.video.VideoListVO;
 import teektok.dto.video.VideoQueryDTO;
 import teektok.dto.video.VideoUploadDTO;
 import teektok.dto.video.VideoVO;
+import teektok.entity.User;
 
 import java.util.List;
 
@@ -46,4 +47,5 @@ public interface IVideoService {
      * 获取用户收藏的视频列表
      */
     PageResult<VideoVO> getFavoritedVideos(Long userId, int page, int size);
+
 }

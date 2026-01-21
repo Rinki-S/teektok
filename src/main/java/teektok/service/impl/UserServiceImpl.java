@@ -3,6 +3,8 @@ package teektok.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
@@ -20,6 +22,7 @@ import teektok.utils.JwtUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,6 +35,9 @@ public class UserServiceImpl implements IUserService {
     private RelationMapper relationMapper;
     @Autowired
     private VideoMapper videoMapper;
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private static final String USER_INFO_KEY = "user:info:";
 
     @Override
     public void register(UserRegisterDTO userRegisterDTO) {
@@ -128,4 +134,28 @@ public class UserServiceImpl implements IUserService {
         vo.setVideoCoverUrls(videoCoverUrls);
         return vo;
     }
+    @Override
+    public User getUserCached(Long userId) {
+        String key = USER_INFO_KEY + userId;
+
+        // 1. 查 Redis
+        User user = (User) redisTemplate.opsForValue().get(key);
+        if (user != null) {
+            return user;
+        }
+
+        // 2. 查 DB
+        user = userMapper.selectById(userId);
+
+        // 3. 写 Redis (设置 24 小时过期，防止冷数据长期占用)
+        if (user != null) {
+            redisTemplate.opsForValue().set(key, user, 24, TimeUnit.HOURS);
+        } else {
+            // 防止缓存穿透：存入空值（过期时间短一点，如 5 分钟）
+             redisTemplate.opsForValue().set(key, new User(), 5, TimeUnit.MINUTES);
+        }
+
+        return user;
+    }
+
 }

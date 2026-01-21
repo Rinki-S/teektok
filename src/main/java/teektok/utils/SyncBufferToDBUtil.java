@@ -9,6 +9,7 @@ import teektok.mapper.VideoStatMapper;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 通用同步方法
@@ -27,37 +28,41 @@ public class SyncBufferToDBUtil {
     private VideoStatMapper videoStatMapper;
 
     public void syncBufferToDB(String bufferKey, String dbField) {
-        // 1. 取出所有缓冲数据
-        Map<Object, Object> entries = redisTemplate.opsForHash().entries(bufferKey);
-        if (entries.isEmpty()) {
+        String tempKey = bufferKey + ":temp:" + System.currentTimeMillis();
+
+        // 1. 原子重命名
+        try {
+            if (Boolean.FALSE.equals(redisTemplate.hasKey(bufferKey))) {
+                return;
+            }
+            redisTemplate.rename(bufferKey, tempKey);
+        } catch (Exception e) {
+            // 此时可能被别的线程处理了，或者 Key 不存在
             return;
         }
 
-        // 2. 立即清除 Redis 缓冲 (防止下一次重复处理)
-        // 注意：高并发下这里存在微小的丢失风险（取出后、删除前有新数据进来）。
-        // 完美方案是用 Lua 脚本原子执行 "get and delete"，或者使用 "rename" 更名后处理。
-        // 简单优化：只删除我们读到的那些 Key，或者使用 rename。
-        // 这里演示简单做法：直接 delete。
-        redisTemplate.delete(bufferKey);
+        // 2. 【兜底】给临时 Key 设置个过期时间 (如 10分钟)
+        // 防止程序刚好在这里宕机，导致 tempKey 永久占用内存
+        redisTemplate.expire(tempKey, 10, TimeUnit.MINUTES);
 
-        // 3. 组装批量更新数据
-        // 结构：Map<VideoId, Delta>
-        Map<Long, Integer> updateMap = new HashMap<>();
-        entries.forEach((k, v) -> {
-            try {
-                updateMap.put(Long.valueOf(k.toString()), Integer.valueOf(v.toString()));
-            } catch (NumberFormatException e) {
-                // ignore
+        try {
+            // 3. 读取数据 (使用标准 API，代码清爽)
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(tempKey);
+
+            Map<Long, Integer> updateMap = new HashMap<>();
+            entries.forEach((k, v) -> {
+                try {
+                    updateMap.put(Long.valueOf(k.toString()), Integer.valueOf(v.toString()));
+                } catch (NumberFormatException e) { /* ignore */ }
+            });
+
+            // 4. 落库
+            if (!updateMap.isEmpty()) {
+                videoStatMapper.batchUpdateStat(updateMap, dbField);
             }
-        });
-
-        // 4. 批量更新数据库
-        // 你需要在 VideoStatMapper 中新增一个 batchUpdate 方法
-        if (!updateMap.isEmpty()) {
-            // 将 Map 分批处理（例如每 1000 条一次），防止 SQL 过长
-            // 这里简化直接传
-            videoStatMapper.batchUpdateStat(updateMap, dbField);
-            log.info("同步 {} 数据完成，条数: {}", dbField, updateMap.size());
+        } finally {
+            // 5. 确保删除临时 Key
+            redisTemplate.delete(tempKey);
         }
     }
 }

@@ -4,6 +4,7 @@ import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
 import teektok.dto.user.UserMeVO;
 import teektok.dto.user.UserRegisterDTO;
+import teektok.entity.User;
 
 public interface IUserService {
 
@@ -22,4 +23,9 @@ public interface IUserService {
      * 获取当前登录用户的主页详情信息
      */
     UserMeVO getMyInfo(Long userId);
+
+    /**
+     * 获取用户信息（优先查 Redis 缓存）
+     */
+    User getUserCached(Long userId);
 }
