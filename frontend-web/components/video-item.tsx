@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Play } from "lucide-react";
 import type { Video } from "@/types/video";
+import { incrementVideoView } from "@/services/videoService";
 
 interface VideoItemProps {
   video: Video;
@@ -21,6 +22,7 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const clickTimerRef = useRef<number | null>(null);
   const wasPlayingRef = useRef(false);
+  const hasCountedPlayRef = useRef(false);
 
   // 浏览器自动播放限制处理：
   // - 初始尝试自动播放（muted），失败则等待用户交互后再播放
@@ -116,6 +118,39 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
       videoElement.removeEventListener("ended", updateProgress);
     };
   }, []);
+
+  useEffect(() => {
+    hasCountedPlayRef.current = false;
+  }, [video.id]);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+
+    const onPlay = () => {
+      if (!isActive) return;
+      if (hasCountedPlayRef.current) return;
+      if (videoElement.currentTime > 0.3) return;
+
+      hasCountedPlayRef.current = true;
+      incrementVideoView(video.id).catch(() => {});
+    };
+
+    const onEnded = () => {
+      if (!isActive) return;
+      hasCountedPlayRef.current = false;
+      videoElement.currentTime = 0;
+      void tryPlay();
+    };
+
+    videoElement.addEventListener("play", onPlay);
+    videoElement.addEventListener("ended", onEnded);
+
+    return () => {
+      videoElement.removeEventListener("play", onPlay);
+      videoElement.removeEventListener("ended", onEnded);
+    };
+  }, [isActive, video.id]);
 
   // 监听用户首次交互：解锁后若当前视频需要播放，则尝试播放
   useEffect(() => {
@@ -245,7 +280,6 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
         <video
           ref={videoRef}
           src={video.videoUrl}
-          loop
           playsInline
           muted
           className="w-full h-full object-contain"

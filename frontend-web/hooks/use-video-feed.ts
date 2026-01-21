@@ -12,7 +12,6 @@ import {
   toggleBookmarkVideo,
   toggleFollowUser,
   shareVideo,
-  incrementVideoView,
 } from "@/services/videoService";
 
 interface UseVideoFeedReturn {
@@ -44,15 +43,6 @@ export function useVideoFeed(
   useEffect(() => {
     loadVideos();
   }, [initialVideoId]);
-
-  // 当前视频变化时，记录播放次数
-  useEffect(() => {
-    if (videos[currentIndex]) {
-      incrementVideoView(videos[currentIndex].id).catch((err) => {
-        console.error("Failed to increment view:", err);
-      });
-    }
-  }, [currentIndex, videos]);
 
   // 加载视频列表
   const loadVideos = async () => {
