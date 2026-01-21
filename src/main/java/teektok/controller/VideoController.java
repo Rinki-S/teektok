@@ -35,6 +35,9 @@ public class VideoController {
     public Result<String> upload(@ModelAttribute VideoUploadDTO dto) { // 使用 @ModelAttribute 或直接对象接收
         try {
             Long userId = BaseContext.getCurrentId();
+            if (userId == null) {
+                return Result.fail(401, "未登录");
+            }
             String url = videoService.upload(dto, userId);
             return Result.success(url);
         } catch (RuntimeException e) {
