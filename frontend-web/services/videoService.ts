@@ -66,6 +66,17 @@ type UserSearchVO = {
   isFollowing?: boolean;
 };
 
+type UserMeVO = {
+  id: number;
+  username: string;
+  avatar?: string;
+  followingCount?: number;
+  followerCount?: number;
+  likeCount?: number;
+  videoUrls?: string[];
+  videoCoverUrls?: string[];
+};
+
 function joinUrl(baseUrl: string, path: string) {
   const b = baseUrl.replace(/\/+$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -551,6 +562,29 @@ export async function getFavoritedVideos(
   };
 }
 
+export async function getMyVideos(
+  page: number = 1,
+  size: number = 10,
+): Promise<{ list: Video[]; total: number }> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<VideoVO>>(
+    `/api/video/my?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(data?.list) ? data.list : [];
+  const list = items.map(mapVideoVOToVideo);
+
+  return {
+    list,
+    total: data?.total ?? 0,
+  };
+}
+
 export async function toggleFollowUser(
   request: FollowUserRequest,
 ): Promise<void> {
@@ -585,6 +619,13 @@ export async function getFriendList(): Promise<UserVO[]> {
     method: "GET",
   });
   return data || [];
+}
+
+export async function getMyInfo(): Promise<UserMeVO> {
+  const data = await requestOpenApi<UserMeVO>("/api/user/me", {
+    method: "GET",
+  });
+  return data;
 }
 
 export async function searchUsers(

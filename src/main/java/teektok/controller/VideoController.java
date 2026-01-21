@@ -83,6 +83,18 @@ public class VideoController {
         return Result.success(videoService.getFavoritedVideos(userId, page, size));
     }
 
+    @Operation(summary = "获取当前用户上传的视频列表")
+    @GetMapping("/my")
+    public Result<PageResult<VideoVO>> getMyVideos(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new RuntimeException("请先登录");
+        }
+        return Result.success(videoService.getMyVideos(userId, page, size));
+    }
+
     // ==================== 播放视频 ====================
 
 /*    @Operation(summary = "播放视频（记录播放行为）")

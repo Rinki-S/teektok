@@ -14,9 +14,11 @@ import teektok.dto.user.UserRegisterDTO;
 import teektok.dto.user.UserSearchVO;
 import teektok.entity.Relation;
 import teektok.entity.User;
+import teektok.entity.VideoStat;
 import teektok.entity.Video;
 import teektok.mapper.RelationMapper;
 import teektok.mapper.UserMapper;
+import teektok.mapper.VideoStatMapper;
 import teektok.mapper.VideoMapper;
 import teektok.service.IUserService;
 import teektok.utils.JwtUtils;
@@ -39,6 +41,8 @@ public class UserServiceImpl implements IUserService {
     private RelationMapper relationMapper;
     @Autowired
     private VideoMapper videoMapper;
+    @Autowired
+    private VideoStatMapper videoStatMapper;
     private RedisTemplate<String, Object> redisTemplate;
 
     private static final String USER_INFO_KEY = "user:info:";
@@ -125,6 +129,18 @@ public class UserServiceImpl implements IUserService {
         List<Video> videos = videoMapper.selectList(new LambdaQueryWrapper<Video>()
                 .eq(Video::getUploaderId, userId)
                 .orderByDesc(Video::getCreateTime));
+
+        List<Long> videoIds = videos.stream().map(Video::getId).collect(Collectors.toList());
+        long likeCount = 0L;
+        if (!videoIds.isEmpty()) {
+            List<VideoStat> stats = videoStatMapper.selectBatchIds(videoIds);
+            likeCount = stats.stream()
+                    .map(VideoStat::getLikeCount)
+                    .filter(v -> v != null)
+                    .mapToLong(Long::longValue)
+                    .sum();
+        }
+        vo.setLikeCount(likeCount);
 
         List<String> videoUrls = videos.stream()
                 .map(Video::getVideoUrl)

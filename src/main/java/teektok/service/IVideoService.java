@@ -48,4 +48,9 @@ public interface IVideoService {
      */
     PageResult<VideoVO> getFavoritedVideos(Long userId, int page, int size);
 
+    /**
+     * 获取当前用户上传的视频列表
+     */
+    PageResult<VideoVO> getMyVideos(Long userId, int page, int size);
+
 }

@@ -347,6 +347,53 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         return buildVideoVOs(videoIds, favoritePage.getTotal());
     }
 
+    @Override
+    public PageResult<VideoVO> getMyVideos(Long userId, int page, int size) {
+        int current = Math.max(1, page);
+        int pageSize = Math.max(1, size);
+        Page<Video> pageParam = new Page<>(current, pageSize);
+
+        LambdaQueryWrapper<Video> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Video::getUploaderId, userId).orderByDesc(Video::getCreateTime);
+        this.page(pageParam, queryWrapper);
+
+        if (pageParam.getRecords().isEmpty()) {
+            return new PageResult<>(Collections.emptyList(), pageParam.getTotal());
+        }
+
+        User uploader = userService.getUserCached(userId);
+
+        List<VideoVO> voList = pageParam.getRecords().stream().map(video -> {
+            VideoVO vo = toVO(video);
+
+            if (uploader != null) {
+                vo.setUploaderName(uploader.getUsername());
+                vo.setUploaderAvatar(uploader.getAvatar());
+            }
+
+            fillVideoStatsFromRedis(vo);
+
+            vo.setIsFollowed(false);
+
+            Long currentUserId = BaseContext.getCurrentId();
+            if (currentUserId != null) {
+                vo.setIsLiked(Boolean.TRUE.equals(
+                        redisTemplate.opsForSet().isMember(USER_LIKE_KEY + currentUserId, video.getId().toString())
+                ));
+                vo.setIsFavorited(Boolean.TRUE.equals(
+                        redisTemplate.opsForSet().isMember(USER_FAVORITE_KEY + currentUserId, video.getId().toString())
+                ));
+            } else {
+                vo.setIsLiked(false);
+                vo.setIsFavorited(false);
+            }
+
+            return vo;
+        }).collect(Collectors.toList());
+
+        return new PageResult<>(voList, pageParam.getTotal());
+    }
+
     private PageResult<VideoVO> buildVideoVOs(List<Long> videoIds, long total) {
         // 1. 批量查询视频
         List<Video> videos = this.listByIds(videoIds);
