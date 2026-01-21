@@ -95,7 +95,7 @@ import java.util.function.Function;
 
         // 4. 发布kafka事件
         if (userId != null) {
-            eventPublisher.publishPlayEvent(videoId, userId);
+//            eventPublisher.publishPlayEvent(videoId, userId);
         }
     }
 
@@ -132,7 +132,7 @@ import java.util.function.Function;
         asyncLogService.saveUserBehavior(userId, videoId, TYPE_LIKE);
 
         // 6. 发布事件
-        eventPublisher.publishLikeEvent(videoId, userId);
+//        eventPublisher.publishLikeEvent(videoId, userId);
     }
 
 
@@ -202,7 +202,7 @@ import java.util.function.Function;
         asyncLogService.saveUserBehavior(userId, videoId, TYPE_FAVORITE);
 
         // 6. 发布事件
-        eventPublisher.publishFavoriteEvent(videoId, userId);
+//        eventPublisher.publishFavoriteEvent(videoId, userId);
     }
 
 
@@ -261,7 +261,7 @@ import java.util.function.Function;
         asyncLogService.saveUserBehavior(userId, dto.getVideoId(), TYPE_COMMENT);
 
         // 5. 发布事件
-        eventPublisher.publishCommentEvent(dto.getVideoId(), userId, dto.getContent());
+//        eventPublisher.publishCommentEvent(dto.getVideoId(), userId, dto.getContent());
     }
 
     @Override
@@ -278,7 +278,7 @@ import java.util.function.Function;
         }
 
         // 4. 发布事件
-        eventPublisher.publishShareEvent(videoId, userId);
+//        eventPublisher.publishShareEvent(videoId, userId);
     }
 
 
