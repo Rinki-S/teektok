@@ -1,6 +1,7 @@
 package teektok.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -10,6 +11,7 @@ import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
 import teektok.dto.user.UserMeVO;
 import teektok.dto.user.UserRegisterDTO;
+import teektok.dto.user.UserSearchVO;
 import teektok.entity.Relation;
 import teektok.entity.User;
 import teektok.entity.Video;
@@ -22,6 +24,7 @@ import teektok.utils.JwtUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -156,6 +159,59 @@ public class UserServiceImpl implements IUserService {
         }
 
         return user;
+    }
+
+    @Override
+    public List<UserSearchVO> searchUsers(Long currentUserId, String keyword, Integer page, Integer size) {
+        String kw = keyword == null ? "" : keyword.trim();
+        if (kw.isEmpty()) {
+            return List.of();
+        }
+
+        int pageNum = page == null || page < 1 ? 1 : page;
+        int pageSize = size == null || size < 1 ? 20 : Math.min(size, 50);
+
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
+                .select(User::getId, User::getUsername, User::getAvatar)
+                .orderByDesc(User::getId);
+
+        if (currentUserId != null) {
+            wrapper.ne(User::getId, currentUserId);
+        }
+
+        boolean isNumeric = kw.chars().allMatch(Character::isDigit);
+        if (isNumeric) {
+            Long targetId = Long.valueOf(kw);
+            wrapper.and(w -> w.eq(User::getId, targetId).or().like(User::getUsername, kw));
+        } else {
+            wrapper.like(User::getUsername, kw);
+        }
+
+        Page<User> mpPage = new Page<>(pageNum, pageSize);
+        List<User> users = userMapper.selectPage(mpPage, wrapper).getRecords();
+
+        if (users == null || users.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> userIds = users.stream().map(User::getId).collect(Collectors.toSet());
+        Set<Long> followedIds = Set.of();
+        if (currentUserId != null && !userIds.isEmpty()) {
+            List<Relation> relations = relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                    .eq(Relation::getUserId, currentUserId)
+                    .in(Relation::getTargetId, userIds));
+            followedIds = relations.stream().map(Relation::getTargetId).collect(Collectors.toSet());
+        }
+
+        Set<Long> finalFollowedIds = followedIds;
+        return users.stream().map(u -> {
+            UserSearchVO vo = new UserSearchVO();
+            vo.setId(u.getId());
+            vo.setUsername(u.getUsername());
+            vo.setAvatar(u.getAvatar());
+            vo.setIsFollowing(finalFollowedIds.contains(u.getId()));
+            return vo;
+        }).collect(Collectors.toList());
     }
 
 }

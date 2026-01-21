@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import {
   Music2,
   Sparkles,
@@ -38,11 +39,6 @@ const itemsRecommend = [
 ];
 
 const itemsUser = [
-  {
-    title: "上传",
-    url: "/upload",
-    icon: Upload,
-  },
   {
     title: "关注",
     url: "/following",
@@ -136,7 +132,17 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter className="mx-2 mb-2">
+        <Button
+          asChild
+          className="h-10 w-full justify-start gap-3 rounded-xl px-5"
+        >
+          <Link href="/upload">
+            <Upload className="h-5! w-5!" />
+            <span className="text-[16px] font-medium pt-0.5">上传</span>
+          </Link>
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }

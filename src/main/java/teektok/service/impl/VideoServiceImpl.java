@@ -80,7 +80,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private static final String USER_FOLLOW_KEY = "user:follow:"; // 假设关注也做了缓存
 
     @Override
-    public void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
+    public String upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
         if (videoUploadDTO.getFile() == null || videoUploadDTO.getFile().isEmpty()) {
             throw new RuntimeException("上传视频不能为空");
         }
@@ -135,6 +135,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         map.put("favoriteCount", 0);
         redisTemplate.opsForHash().putAll(VIDEO_STAT_KEY + video.getId(), map);
         redisTemplate.expire(VIDEO_STAT_KEY + video.getId(), 24, TimeUnit.HOURS);
+        return url;
     }
 
     @Override

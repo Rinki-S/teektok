@@ -8,8 +8,11 @@ import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
 import teektok.dto.user.UserMeVO;
 import teektok.dto.user.UserRegisterDTO;
+import teektok.dto.user.UserSearchVO;
 import teektok.service.IUserService;
 import teektok.utils.BaseContext;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
@@ -47,6 +50,20 @@ public class UserController {
 
         UserMeVO vo = userService.getMyInfo(userId);
         return Result.success(vo);
+    }
+
+    @Operation(summary = "按用户名/ID搜索用户")
+    @GetMapping("/search")
+    public Result<List<UserSearchVO>> search(
+            @RequestParam String keyword,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer size
+    ) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.fail(401, "未登录");
+        }
+        return Result.success(userService.searchUsers(userId, keyword, page, size));
     }
 
 }

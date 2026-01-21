@@ -59,6 +59,13 @@ type UserVO = {
   // 其他字段视后端返回而定
 };
 
+type UserSearchVO = {
+  id: number;
+  username: string;
+  avatar?: string;
+  isFollowing?: boolean;
+};
+
 function joinUrl(baseUrl: string, path: string) {
   const b = baseUrl.replace(/\/+$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -577,5 +584,26 @@ export async function getFriendList(): Promise<UserVO[]> {
   const data = await requestOpenApi<UserVO[]>("/api/relation/friend/list", {
     method: "GET",
   });
+  return data || [];
+}
+
+export async function searchUsers(
+  keyword: string,
+  page: number = 1,
+  size: number = 20,
+): Promise<UserSearchVO[]> {
+  const kw = keyword.trim();
+  if (!kw) return [];
+
+  const params = new URLSearchParams({
+    keyword: kw,
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<UserSearchVO[]>(
+    `/api/user/search?${params.toString()}`,
+    { method: "GET" },
+  );
   return data || [];
 }

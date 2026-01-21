@@ -16,7 +16,7 @@ public interface IVideoService {
     /*
      * 上传短视频
      * */
-    void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception;
+    String upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception;
 
     /*
      * 获取视频列表(分页)
