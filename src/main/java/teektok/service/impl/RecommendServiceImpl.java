@@ -8,9 +8,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.entity.RecommendationResult;
+import teektok.entity.User;
 import teektok.entity.Video;
 import teektok.entity.VideoStat;
 import teektok.mapper.RecommendationResultMapper;
+import teektok.mapper.UserMapper;
 import teektok.mapper.VideoMapper;
 import teektok.mapper.VideoStatMapper;
 import teektok.service.IRecommendService;
@@ -35,11 +37,13 @@ public class RecommendServiceImpl implements IRecommendService {
     private VideoMapper videoMapper;
     @Autowired
     private VideoStatMapper videoStatMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final String REDIS_KEY_PREFIX = "user:recommend:";
+    private static final String REDIS_KEY_PREFIX = "user:recommend:v2:";
 
     @Override
     public List<RecommendVideoVO> getPersonalRecommendFeed(Long userId) {
@@ -173,7 +177,18 @@ public class RecommendServiceImpl implements IRecommendService {
         Map<Long, Video> videoMap = videos.stream()
                 .collect(Collectors.toMap(Video::getId, Function.identity()));
 
-        // B. 批量查统计信息 (点赞/评论数)
+        // B. 批量查作者信息
+        List<Long> uploaderIds = videos.stream()
+                .map(Video::getUploaderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, User> userMap = uploaderIds.isEmpty()
+                ? Collections.emptyMap()
+                : userMapper.selectBatchIds(uploaderIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        // C. 批量查统计信息 (点赞/评论数)
         List<VideoStat> stats = videoStatMapper.selectBatchIds(videoIds);
         Map<Long, VideoStat> statMap = stats.stream()
                 .collect(Collectors.toMap(VideoStat::getVideoId, Function.identity()));
@@ -191,6 +206,14 @@ public class RecommendServiceImpl implements IRecommendService {
             vo.setTitle(video.getTitle());
             vo.setVideoUrl(video.getVideoUrl());
             vo.setCoverUrl(video.getCoverUrl());
+            vo.setDescription(video.getDescription());
+
+            User uploader = video.getUploaderId() == null ? null : userMap.get(video.getUploaderId());
+            vo.setUploaderId(video.getUploaderId());
+            if (uploader != null) {
+                vo.setUploaderName(uploader.getUsername());
+                vo.setUploaderAvatar(uploader.getAvatar());
+            }
 
             // 统计信息
             VideoStat stat = statMap.get(vid);
