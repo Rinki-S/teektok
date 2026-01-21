@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CommentsSheet } from "@/components/comments-sheet";
 import { ShareSheet } from "@/components/share-sheet";
 import { toast } from "sonner";
+import { getCurrentUserId } from "@/services/videoService";
 
 interface ShortsActionsProps {
   video: Video;
@@ -27,37 +28,41 @@ export function ShortsActions({
   onShare,
   onFollow,
 }: ShortsActionsProps) {
-  const [isLiked, setIsLiked] = useState(video.isLiked || false);
-  const [isBookmarked, setIsBookmarked] = useState(video.isBookmarked || false);
-  const [isFollowing, setIsFollowing] = useState(
-    video.author.isFollowing || false,
-  );
-  const [likesCount, setLikesCount] = useState(video.stats.likes);
-  const [sharesCount, setSharesCount] = useState(video.stats.shares);
+  // 直接使用 video props 渲染，移除本地状态，确保父组件回滚时 UI 同步
+  const isLiked = video.isLiked || false;
+  const isBookmarked = video.isBookmarked || false;
+  const isFollowing = video.author.isFollowing || false;
+  const likesCount = video.stats.likes;
+  const sharesCount = video.stats.shares;
+  
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
 
+  const checkLogin = () => {
+    if (!getCurrentUserId()) {
+      toast.error("请先登录");
+      return false;
+    }
+    return true;
+  };
+
   const handleLike = () => {
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount((prev) => (newLikedState ? prev + 1 : prev - 1));
-    onLike(video.id, newLikedState);
+    if (!checkLogin()) return;
+    onLike(video.id, !isLiked);
   };
 
   const handleBookmark = () => {
-    const newBookmarkedState = !isBookmarked;
-    setIsBookmarked(newBookmarkedState);
-    onBookmark(video.id, newBookmarkedState);
+    if (!checkLogin()) return;
+    onBookmark(video.id, !isBookmarked);
   };
 
   const handleFollow = () => {
-    const newFollowingState = !isFollowing;
-    setIsFollowing(newFollowingState);
-    onFollow(video.author.id, newFollowingState);
+    if (!checkLogin()) return;
+    onFollow(video.author.id, !isFollowing);
   };
 
   const handleShareAction = () => {
+    // 分享通常不需要登录，或者视业务而定。这里暂时保留原逻辑，不强制登录
     onShare(video.id);
-    setSharesCount((prev) => prev + 1);
     setIsShareSheetOpen(false);
   };
 

@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Play } from "lucide-react";
 import type { Video } from "@/types/video";
-import { incrementVideoView } from "@/services/videoService";
+import { incrementVideoView, getCurrentUserId } from "@/services/videoService";
+import { toast } from "sonner";
 
 interface VideoItemProps {
   video: Video;
@@ -16,7 +17,8 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const [showHeart, setShowHeart] = useState(false);
-  const [isLiked, setIsLiked] = useState(video.isLiked || false);
+  // 移除 isLiked 本地状态，直接使用 video.isLiked
+  const isLiked = video.isLiked || false;
   const [isPaused, setIsPaused] = useState(true);
   const [progress, setProgress] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -215,6 +217,7 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
     }
 
     handleLike();
+    // 双击即使未登录也显示爱心动画，增强趣味性，或者你可以选择不显示
     setShowHeart(true);
     setTimeout(() => setShowHeart(false), 1000);
 
@@ -225,8 +228,12 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
   };
 
   const handleLike = () => {
+    if (!getCurrentUserId()) {
+      toast.error("请先登录");
+      return;
+    }
     const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
+    // setIsLiked(newLikedState); // 移除本地更新
     onLike(video.id, newLikedState);
   };
 

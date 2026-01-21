@@ -28,8 +28,6 @@ public class WebConfig implements WebMvcConfigurer {
                     "/api/user/login",
                     "/api/user/register",
                     "/api/behavior/play",
-                    "/api/video/**",
-                    "/api/comment/list",
                     "/api/admin/**",
                     "/api/analysis/**"
                 );

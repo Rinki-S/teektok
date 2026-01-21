@@ -28,10 +28,24 @@ public class TokenInterceptor implements HandlerInterceptor {
             log.info("登录请求，放行");
             return true;
         }
-        //3.获取请求头中的token
+        //3.判断是否为可选鉴权接口 (游客可访问，但带Token需解析)
+        boolean isOptionalAuth = false;
+        // 视频列表、视频详情(ID为数字)、评论列表
+        if (requestURI.contains("/api/video/list") || 
+            (requestURI.matches(".*/api/video/\\d+$") && "GET".equalsIgnoreCase(request.getMethod())) ||
+            requestURI.contains("/api/comment/list")) {
+            isOptionalAuth = true;
+        }
+
+        //4.获取请求头中的token
         String token = request.getHeader("token");
-        //4.判断token是否存在，不存在则响应401
+
+        //5.Token为空的处理
         if(token==null||token.isEmpty()){
+            if (isOptionalAuth) {
+                log.info("可选鉴权接口且无Token，游客放行");
+                return true;
+            }
             log.info("令牌不存在，响应401");
             response.setStatus(401);
             response.setContentType("application/json;charset=UTF-8");
@@ -40,7 +54,8 @@ public class TokenInterceptor implements HandlerInterceptor {
             writer.flush();
             return false;
         }
-        //5.验证token合法性，非法则响应401
+
+        //6.验证token合法性
         try {
             Claims claims = JwtUtils.parseToken(token);
             Long userId = Long.valueOf(claims.get("userId").toString());
