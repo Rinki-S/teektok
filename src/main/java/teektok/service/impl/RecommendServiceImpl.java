@@ -46,9 +46,9 @@ public class RecommendServiceImpl implements IRecommendService {
     private static final String REDIS_KEY_PREFIX = "user:recommend:v2:";
 
     @Override
-    public List<RecommendVideoVO> getPersonalRecommendFeed(Long userId) {
-        // 定义缓存 Key，区分登录用户和游客
-        String cacheKey = REDIS_KEY_PREFIX + (userId == null ? "guest" : userId);
+    public List<RecommendVideoVO> getPersonalRecommendFeed(Long userId, int page, int size) {
+        // 定义缓存 Key，区分登录用户和游客，以及页码
+        String cacheKey = REDIS_KEY_PREFIX + (userId == null ? "guest" : userId) + ":" + page;
 
         // ================== 1. 查询 Redis 缓存 ==================
         //优先从redis中查询推荐列表
@@ -65,6 +65,10 @@ public class RecommendServiceImpl implements IRecommendService {
         }
 
         // ================== 2. 查询 MySQL  ==================
+        // 计算分页 offset
+        int offset = (page - 1) * size;
+        String limitSql = "LIMIT " + offset + ", " + size;
+
         // 1. 获取推荐的 Video ID 列表
         List<Long> videoIds = Collections.emptyList();
 
@@ -72,33 +76,32 @@ public class RecommendServiceImpl implements IRecommendService {
             List<RecommendationResult> results = null;
             try {
                 // 2. 进行实时推荐查询
-                // 登录用户：查推荐表 (按分数倒序取前20)
+                // 登录用户：查推荐表 (按分数倒序)
                 results = recommendationMapper.selectList(
                         new LambdaQueryWrapper<RecommendationResult>()
                                 .eq(RecommendationResult::getUserId, userId)
                                 .eq(RecommendationResult::getType, "REALTIME")
                                 .orderByDesc(RecommendationResult::getScore)
-                                .last("LIMIT 20")
+                                .last(limitSql)
                 );
             } catch (Exception e) {
                 System.err.println("[RECOMMEND] 实时推荐查询失败: " + e.getMessage());
-                results = null;  // 确保results为null以触发离线查询
+                results = null;
             }
 
             if (results == null || results.isEmpty()) {
                 try {
                     //获取离线推荐
-                    // 登录用户：查推荐表 (按分数倒序取前20)
                     results = recommendationMapper.selectList(
                             new LambdaQueryWrapper<RecommendationResult>()
                                     .eq(RecommendationResult::getUserId, userId)
                                     .eq(RecommendationResult::getType, "OFFLINE")
                                     .orderByDesc(RecommendationResult::getScore)
-                                    .last("LIMIT 20")
+                                    .last(limitSql)
                     );
                 } catch (Exception e) {
                     System.err.println("[RECOMMEND] 离线推荐查询失败: " + e.getMessage());
-                    results = Collections.emptyList();  // 确保返回空列表而不是null
+                    results = Collections.emptyList();
                 }
             }
 
@@ -115,7 +118,7 @@ public class RecommendServiceImpl implements IRecommendService {
                             .eq(Video::getIsHot, 1) // 如果有热门字段可开启
                             .eq(Video::getIsDeleted, 0) // 必须是未删除的
                             .orderByDesc(Video::getCreateTime) // 按时间倒序
-                            .last("LIMIT 20")
+                            .last(limitSql)
             );
             videoIds = fallbackVideos.stream().map(Video::getId).collect(Collectors.toList());
         }
@@ -143,24 +146,26 @@ public class RecommendServiceImpl implements IRecommendService {
     }
 
     @Override
-    public List<RecommendVideoVO> getHotRecommendFeed() {
+    public List<RecommendVideoVO> getHotRecommendFeed(int page, int size) {
         // 1. 获取推荐的 Video ID 列表
         List<Long> videoIds = Collections.emptyList();
 
-        // 2.查视频表(取is_hot=1前20)
+        int offset = (page - 1) * size;
+        String limitSql = "LIMIT " + offset + ", " + size;
+
+        // 2.查视频表(取is_hot=1)
         List<Video> result = videoMapper.selectList(
                 new LambdaQueryWrapper<Video>()
                         .eq(Video::getIsHot, 1)
                         .eq(Video::getIsDeleted, 0)
                         .orderByDesc(Video::getCreateTime)
-                        .last("LIMIT 20")
+                        .last(limitSql)
         );
 
         //3. 提取视频ID列表
         videoIds = result.stream().map(Video::getId).collect(Collectors.toList());
 
         // 4. 核心步骤：数据聚合 (Data Aggregation)
-        // 拿着 ID 列表，批量去查 Video表、User表、Stat表，然后在内存里组装
         return buildVOs(videoIds);
     }
 

@@ -20,16 +20,21 @@ public class RecommendController {
 
     @Operation(summary = "获取个性化推荐视频流")
     @GetMapping("/{userId}")
-    public Result<List<RecommendVideoVO>> getFeed(@PathVariable Long userId) {
+    public Result<List<RecommendVideoVO>> getFeed(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
         // 如果前端没传 userId，说明是游客，Service 会自动走兜底逻辑
-        List<RecommendVideoVO> list = recommendService.getPersonalRecommendFeed(userId);
+        List<RecommendVideoVO> list = recommendService.getPersonalRecommendFeed(userId, page, size);
         return Result.success(list);
     }
 
     @Operation(summary = "获取热门推荐视频流")
     @GetMapping("/hot")
-    public Result<List<RecommendVideoVO>> getHot() {
-        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed();
+    public Result<List<RecommendVideoVO>> getHot(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(page, size);
         return Result.success(list);
     }
 }

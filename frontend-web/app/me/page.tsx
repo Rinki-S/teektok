@@ -188,9 +188,9 @@ export default function MePage() {
   const likeCount = me?.likeCount ?? 0;
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 items-start justify-center overflow-hidden bg-sidebar px-6 py-8">
-      <div className="w-full max-w-4xl">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center overflow-hidden bg-sidebar px-6 py-8">
+      <div className="w-full max-w-4xl flex flex-col h-full">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start flex-none">
           <Avatar size="lg" className="h-20 w-20">
             <AvatarImage src={finalAvatar} alt={finalName} />
             <AvatarFallback className="text-lg">
@@ -219,12 +219,13 @@ export default function MePage() {
           </div>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 flex-1 min-h-0 flex flex-col">
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as TabKey)}
+            className="flex flex-col h-full"
           >
-            <TabsList className="mb-4 flex flex-wrap gap-2 bg-transparent p-0">
+            <TabsList className="mb-4 flex flex-wrap gap-2 bg-transparent p-0 flex-none">
               {tabLabels.map((tab) => (
                 <TabsTrigger
                   key={tab.key}
@@ -238,7 +239,7 @@ export default function MePage() {
 
             <TabsContent
               value="works"
-              className="text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
             >
               {isLoadingList ? (
                 <div className="py-12 text-center">加载中...</div>
@@ -248,7 +249,7 @@ export default function MePage() {
             </TabsContent>
             <TabsContent
               value="likes"
-              className="text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
             >
               {isLoadingList ? (
                 <div className="py-12 text-center">加载中...</div>
@@ -258,7 +259,7 @@ export default function MePage() {
             </TabsContent>
             <TabsContent
               value="bookmarks"
-              className="text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
             >
               {isLoadingList ? (
                 <div className="py-12 text-center">加载中...</div>
@@ -268,7 +269,7 @@ export default function MePage() {
             </TabsContent>
             <TabsContent
               value="history"
-              className="text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
             >
               暂无观看历史
             </TabsContent>

@@ -287,63 +287,82 @@ export async function getVideoFeed(
   };
 }
 
-export async function getRecommendFeed(userId: string): Promise<VideoListResponse> {
-  // GET /api/recommend/{userId}
-  const data = await requestOpenApi<VideoVO[]>(`/api/recommend/${userId}`, {
-    method: "GET",
+export async function getRecommendFeed(
+  userId: string,
+  cursor?: string,
+  limit: number = 10,
+): Promise<VideoListResponse> {
+  const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(limit),
   });
 
-  // RecommendVideoVO in backend uses 'id' instead of 'videoId', and missing some fields.
-  // We need to map it carefully. 
-  // Ideally backend should return consistent VO. For now we map what we have.
+  // GET /api/recommend/{userId}?page=...&size=...
+  const data = await requestOpenApi<VideoVO[]>(
+    `/api/recommend/${userId}?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
   const items = Array.isArray(data) ? data : [];
-  
-  const videos = items.map(item => {
-    // Adapter for RecommendVideoVO which might use 'id' instead of 'videoId'
+  const videos = items.map((item) => {
     const maybe = item as VideoVO & { id?: unknown };
     const videoId = typeof maybe.id === "number" ? maybe.id : item.videoId;
-    
-    // Construct a VideoVO compatible object
     const vo: VideoVO = {
-        ...item,
-        videoId: videoId,
-        // RecommendVideoVO has 'id', 'title', 'videoUrl', 'coverUrl', 'likeCount', 'commentCount', 'favoriteCount', 'shareCount'
-        // It might be missing uploader info.
+      ...item,
+      videoId: videoId,
     };
     return mapVideoVOToVideo(vo);
   });
 
+  // If we got items, assume there might be more
+  // If we got fewer than limit, we know there's no more
+  const hasMore = items.length === limit;
+
   return {
     videos,
-    nextCursor: undefined, // No pagination for recommend feed currently
-    hasMore: false,
+    nextCursor: hasMore ? String(page + 1) : undefined,
+    hasMore,
   };
 }
 
-export async function getHotFeed(): Promise<VideoListResponse> {
-  // GET /api/recommend/hot
-  const data = await requestOpenApi<VideoVO[]>(`/api/recommend/hot`, {
-    method: "GET",
+export async function getHotFeed(
+  cursor?: string,
+  limit: number = 10,
+): Promise<VideoListResponse> {
+  const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(limit),
   });
 
+  // GET /api/recommend/hot?page=...&size=...
+  const data = await requestOpenApi<VideoVO[]>(
+    `/api/recommend/hot?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
   const items = Array.isArray(data) ? data : [];
-  
-  const videos = items.map(item => {
-    // Adapter for RecommendVideoVO
+  const videos = items.map((item) => {
     const maybe = item as VideoVO & { id?: unknown };
     const videoId = typeof maybe.id === "number" ? maybe.id : item.videoId;
-    
     const vo: VideoVO = {
-        ...item,
-        videoId: videoId,
+      ...item,
+      videoId: videoId,
     };
     return mapVideoVOToVideo(vo);
   });
 
+  const hasMore = items.length === limit;
+
   return {
     videos,
-    nextCursor: undefined, // No pagination for hot feed currently
-    hasMore: false,
+    nextCursor: hasMore ? String(page + 1) : undefined,
+    hasMore,
   };
 }
 
