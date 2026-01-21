@@ -14,6 +14,7 @@ import type {
   FollowUserRequest,
   Comment,
 } from "@/types/video";
+import { toast } from "sonner";
 
 // OpenAPI paths already include `/api` prefix.
 const API_BASE_URL =
@@ -125,6 +126,7 @@ async function requestOpenApi<T>(
         typeof (parsed as { msg?: unknown }).msg === "string"
         ? (parsed as { msg: string }).msg
         : `${res.status || ""} ${res.statusText || "Request failed"}`.trim();
+    toast.error(msg);
     throw new Error(msg);
   }
 
@@ -135,7 +137,11 @@ async function requestOpenApi<T>(
     "code" in parsed
   ) {
     const env = parsed as ApiEnvelope<T>;
-    if (env.code !== 200) throw new Error(env.msg || "API error");
+    if (env.code !== 200) {
+      const errorMsg = env.msg || "API error";
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
     return (env.data as T) ?? (undefined as T);
   }
 
@@ -170,6 +176,7 @@ async function requestOpenApiFormData<T>(
         typeof (parsed as { msg?: unknown }).msg === "string"
         ? (parsed as { msg: string }).msg
         : res.statusText || "Request failed";
+    toast.error(msg);
     throw new Error(msg);
   }
 
@@ -180,7 +187,11 @@ async function requestOpenApiFormData<T>(
     "code" in parsed
   ) {
     const env = parsed as ApiEnvelope<T>;
-    if (env.code !== 200) throw new Error(env.msg || "API error");
+    if (env.code !== 200) {
+      const errorMsg = env.msg || "API error";
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
     return (env.data as T) ?? (undefined as T);
   }
 
