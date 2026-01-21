@@ -32,10 +32,16 @@ public class VideoController {
     // ==================== 上传视频 ====================
     @Operation(summary = "上传视频")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Result<String> upload(@ModelAttribute VideoUploadDTO dto) throws Exception { // 使用 @ModelAttribute 或直接对象接收
-        Long userId = BaseContext.getCurrentId();
-        videoService.upload(dto, userId);
-        return Result.success();
+    public Result<String> upload(@ModelAttribute VideoUploadDTO dto) { // 使用 @ModelAttribute 或直接对象接收
+        try {
+            Long userId = BaseContext.getCurrentId();
+            String url = videoService.upload(dto, userId);
+            return Result.success(url);
+        } catch (RuntimeException e) {
+            return Result.fail(500, e.getMessage());
+        } catch (Exception e) {
+            return Result.fail(500, "上传视频失败");
+        }
     }
 
     // ==================== 视频列表 ====================

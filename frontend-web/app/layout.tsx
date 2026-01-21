@@ -68,6 +68,7 @@ export default function RootLayout({
               </main>
             </SidebarProvider>
           </ShortsNavProvider>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

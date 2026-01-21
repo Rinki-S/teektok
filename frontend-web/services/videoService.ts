@@ -124,6 +124,51 @@ async function requestOpenApi<T>(
   return parsed as T;
 }
 
+async function requestOpenApiFormData<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const url = joinUrl(API_BASE_URL, path);
+
+  const token = getAuthToken();
+
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      ...(token ? { token } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+
+  const text = await res.text();
+  const parsed: unknown = text ? JSON.parse(text) : null;
+
+  if (!res.ok) {
+    const msg =
+      parsed &&
+        typeof parsed === "object" &&
+        parsed !== null &&
+        "msg" in parsed &&
+        typeof (parsed as { msg?: unknown }).msg === "string"
+        ? (parsed as { msg: string }).msg
+        : res.statusText || "Request failed";
+    throw new Error(msg);
+  }
+
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    parsed !== null &&
+    "code" in parsed
+  ) {
+    const env = parsed as ApiEnvelope<T>;
+    if (env.code !== 200) throw new Error(env.msg || "API error");
+    return (env.data as T) ?? (undefined as T);
+  }
+
+  return parsed as T;
+}
+
 function mapVideoVOToVideo(item: VideoVO): Video {
   const id = String(item.videoId);
 
@@ -226,7 +271,8 @@ export async function getRecommendFeed(userId: string): Promise<VideoListRespons
   
   const videos = items.map(item => {
     // Adapter for RecommendVideoVO which might use 'id' instead of 'videoId'
-    const videoId = (item as any).id || item.videoId;
+    const maybe = item as VideoVO & { id?: unknown };
+    const videoId = typeof maybe.id === "number" ? maybe.id : item.videoId;
     
     // Construct a VideoVO compatible object
     const vo: VideoVO = {
@@ -255,7 +301,8 @@ export async function getHotFeed(): Promise<VideoListResponse> {
   
   const videos = items.map(item => {
     // Adapter for RecommendVideoVO
-    const videoId = (item as any).id || item.videoId;
+    const maybe = item as VideoVO & { id?: unknown };
+    const videoId = typeof maybe.id === "number" ? maybe.id : item.videoId;
     
     const vo: VideoVO = {
         ...item,
@@ -280,6 +327,22 @@ export async function getVideoById(videoId: string): Promise<Video> {
   });
 
   return mapVideoVOToVideo(item);
+}
+
+export async function uploadVideo(input: {
+  file: File;
+  title: string;
+  description?: string;
+}): Promise<void> {
+  const formData = new FormData();
+  formData.append("file", input.file);
+  formData.append("title", input.title);
+  if (input.description) formData.append("description", input.description);
+
+  await requestOpenApiFormData<void>("/api/video/upload", {
+    method: "POST",
+    body: formData,
+  });
 }
 
 // ============================================

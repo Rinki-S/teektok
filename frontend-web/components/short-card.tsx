@@ -71,6 +71,7 @@ export function ShortCard({
           onClick={(e) => e.stopPropagation()}
         >
           <ShortsActions
+            key={video.id}
             video={video}
             onLike={onLike}
             onComment={onComment}

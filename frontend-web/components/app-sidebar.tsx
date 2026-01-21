@@ -14,8 +14,8 @@ import {
 import {
   Music2,
   Sparkles,
-  ThumbsUp,
   TrendingUp,
+  Upload,
   UserRound,
   UserRoundCheck,
   UsersRound,
@@ -38,6 +38,11 @@ const itemsRecommend = [
 ];
 
 const itemsUser = [
+  {
+    title: "上传",
+    url: "/upload",
+    icon: Upload,
+  },
   {
     title: "关注",
     url: "/following",

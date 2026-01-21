@@ -57,3 +57,7 @@ aliyun:
     endpoint: https://oss-cn-beijing.aliyuncs.com
     bucketName: teektok
     region: cn-beijing
+teektok:
+  media:
+    base-url: http://localhost:8080
+    local-dir: uploads
