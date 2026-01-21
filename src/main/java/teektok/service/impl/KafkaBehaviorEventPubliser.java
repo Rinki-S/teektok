@@ -1,5 +1,6 @@
 package teektok.service.impl;
 
+import cn.hutool.core.lang.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,6 @@ public class KafkaBehaviorEventPubliser implements BehaviorEventPubliser {
     private static final Integer TYPE_COMMENT = 4;
     private static final Integer TYPE_SHARE = 5;
 
-    private static int id = 1;
 
     /**
      * 发布播放事件
@@ -71,12 +71,11 @@ public class KafkaBehaviorEventPubliser implements BehaviorEventPubliser {
      */
     private void sendBehaviorMap(Long videoId, Long userId, Integer type, String content) {
         Map<String, Object> message = new HashMap<>();
-        message.put("id", id);
+        message.put("id", UUID.randomUUID().toString());
         message.put("uid", userId);
         message.put("mid", videoId); // 对应你要求的字段名
         message.put("behaviorType", type);
         message.put("createDate", System.currentTimeMillis());
-        id++;
 
         // 组装 extra 嵌套对象
         /*Map<String, Object> extra = new HashMap<>();

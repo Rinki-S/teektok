@@ -32,6 +32,7 @@ import teektok.mapper.VideoLikeMapper;
 import teektok.mapper.VideoMapper;
 import teektok.mapper.VideoStatMapper;
 import teektok.mapper.RelationMapper;
+import teektok.service.IRelationService;
 import teektok.service.IUserService;
 import teektok.service.IVideoService;
 import teektok.utils.AliyunOSSOperator;
@@ -67,6 +68,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     @Autowired
     private IUserService userService;
     @Autowired
+    private IRelationService relationService;
+    @Autowired
     @Qualifier("commonExecutor") // 引用 ThreadPoolConfig 中的 bean
     private Executor commonExecutor;
 
@@ -79,6 +82,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private static final String USER_FAVORITE_KEY = "user:favorite:";
     private static final String USER_FOLLOW_KEY = "user:follow:"; // 假设关注也做了缓存
 
+    private static final String VIDEO_INFO_KEY = "video:info:";
+
     @Override
     public String upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
         if (videoUploadDTO.getFile() == null || videoUploadDTO.getFile().isEmpty()) {
@@ -90,9 +95,9 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         try {
             // 传递 contentType
             url = aliyunOSSOperator.upload(
-                videoUploadDTO.getFile().getBytes(), 
-                videoUploadDTO.getFile().getOriginalFilename(),
-                videoUploadDTO.getFile().getContentType()
+                    videoUploadDTO.getFile().getBytes(),
+                    videoUploadDTO.getFile().getOriginalFilename(),
+                    videoUploadDTO.getFile().getContentType()
             );
         } catch (Exception e) {
             e.printStackTrace();
@@ -134,6 +139,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         map.put("shareCount", 0);
         map.put("favoriteCount", 0);
         redisTemplate.opsForHash().putAll(VIDEO_STAT_KEY + video.getId(), map);
+        long timeout = 24 * 60 * 60 + new Random().nextInt(3600); // 24小时 + 0~1小时随机
+        redisTemplate.expire(VIDEO_STAT_KEY + video.getId(), timeout, TimeUnit.HOURS);
         redisTemplate.expire(VIDEO_STAT_KEY + video.getId(), 24, TimeUnit.HOURS);
         return url;
     }
@@ -228,10 +235,35 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
     @Override
     public VideoVO getDetail(Long videoId) {
-        // 1. 查询视频实体(主键查询，速度快，暂不需要优化)
-        Video video = this.getById(videoId);
+        String key = VIDEO_INFO_KEY + videoId;
+
+        // 1. 查 Redis 缓存
+        Video video = null;
+        Object cachedObj = redisTemplate.opsForValue().get(key);
+
+        if (cachedObj != null) {
+            // 【关键防御】如果缓存的是一个 ID 为空的“空对象”，说明之前已经查过数据库不存在
+            if (video != null && video.getId() == null) {
+                throw new RuntimeException("视频不存在"); // 直接拦截，不查库
+            }
+        }
+
+        // 2. 如果缓存没命中（或者取出的数据异常），回源查数据库
         if (video == null) {
-            throw new RuntimeException("视频不存在");
+            video = this.getById(videoId);
+
+            // 3. 【解决穿透的核心】数据库也没查到
+            if (video == null) {
+                // 往 Redis 存一个“空对象”（ID 为 null 的 Video）
+                // 设置较短的过期时间 (如 5 分钟)，防止长期占用内存或后续该 ID 被真的创建了
+                redisTemplate.opsForValue().set(key, new Video(), 5, TimeUnit.MINUTES);
+                throw new RuntimeException("视频不存在");
+            }
+
+            // 4. 数据库查到了，写入 Redis (设置正常过期时间，如 1 天)
+            // 加上随机过期时间防止雪崩：24小时 + 随机 0-60 分钟
+            long timeout = 24 * 60 * 60 + new Random().nextInt(3600);
+            redisTemplate.opsForValue().set(key, video, timeout, TimeUnit.SECONDS);
         }
 
         // 2. 转换 VO
@@ -320,7 +352,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         List<Video> videos = this.listByIds(videoIds);
         // 保持顺序：因为 listByIds 不保证顺序，我们需要按 videoIds 的顺序排序
         Map<Long, Video> videoMap = videos.stream().collect(Collectors.toMap(Video::getId, Function.identity()));
-        
+
         List<Video> orderedVideos = videoIds.stream()
                 .map(videoMap::get)
                 .filter(java.util.Objects::nonNull)
@@ -332,7 +364,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
         // 2. 提取 uploaderIds
         List<Long> uploaderIds = orderedVideos.stream().map(Video::getUploaderId).distinct().toList();
-        Map<Long, User> userMap = Collections.emptyMap();;
+        Map<Long, User> userMap = Collections.emptyMap();
+        ;
         if (!uploaderIds.isEmpty()) {
             // 这里也可以优化为循环调用 userService.getUserCached，但批量查库通常性能可以接受
             userMap = userMapper.selectBatchIds(uploaderIds).stream().collect(Collectors.toMap(User::getId, Function.identity()));
@@ -345,7 +378,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         Long currentUserId = BaseContext.getCurrentId();
         Map<Long, Boolean> likedMap = new HashMap<>();
         Map<Long, Boolean> favoritedMap = new HashMap<>();
-        
+
         if (currentUserId != null) {
             likedMap = batchGetInteractionStatus(USER_LIKE_KEY + currentUserId, videoIds);
             favoritedMap = batchGetInteractionStatus(USER_FAVORITE_KEY + currentUserId, videoIds);
@@ -355,13 +388,51 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         // 关注关系较复杂，暂维持查库，或者需要 RelationService 提供 Redis 接口
         Set<Long> followedUploaderIds = new HashSet<>();
         if (currentUserId != null && !uploaderIds.isEmpty()) {
-            List<Relation> relations = relationMapper.selectList(new LambdaQueryWrapper<Relation>()
-                    .eq(Relation::getUserId, currentUserId)
-                    .in(Relation::getTargetId, uploaderIds));
-            followedUploaderIds = relations.stream().map(Relation::getTargetId).collect(Collectors.toSet());
+            String followKey = USER_FOLLOW_KEY + currentUserId;
+
+            // A. 尝试走 Redis Pipeline 查询
+            // 注意：这里我们判断 hasKey。如果 key 存在（哪怕是空集占位符），都算命中缓存
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(followKey))) {
+                List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                    for (Long uploaderId : uploaderIds) {
+                        connection.sIsMember(followKey.getBytes(), uploaderId.toString().getBytes());
+                    }
+                    return null;
+                });
+
+                // 解析 Pipeline 结果
+                // 注意：uploaderIds 是去重后的列表，我们需要按顺序对应
+                for (int i = 0; i < uploaderIds.size(); i++) {
+                    Object res = results.get(i);
+                    if (res instanceof Boolean && (Boolean) res) {
+                        followedUploaderIds.add(uploaderIds.get(i));
+                    }
+                }
+            } else {
+                // B. 缓存未命中 (冷用户)
+                // 1. 【同步兜底】先去 DB 查当前这页需要的作者 (只查这 10 个，保证当前请求速度)
+                List<Relation> relations = relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                        .eq(Relation::getUserId, currentUserId)
+                        .in(Relation::getTargetId, uploaderIds));
+
+                followedUploaderIds = relations.stream().map(Relation::getTargetId).collect(Collectors.toSet());
+
+                // 2. 【异步全量加载】触发一个后台任务，去把该用户所有的关注列表加载到 Redis
+                // 这样用户翻到下一页时，Redis 里就有数据了
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        // 调用刚才写好的 Service 方法
+                        relationService.loadUserFollowCache(currentUserId);
+                        log.info("异步加载用户关注列表完成 uid:{}", currentUserId);
+                    } catch (Exception e) {
+                        log.error("异步加载关注列表失败", e);
+                    }
+                }, commonExecutor); // 使用线程池
+            }
         }
 
-        // 5. 组装 VO
+
+        // 6. 组装 VO
         Map<Long, User> finalUserMap = userMap;
         Map<Long, Boolean> finalLikedMap = likedMap;
         Map<Long, Boolean> finalFavoritedMap = favoritedMap;
@@ -386,7 +457,11 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
                 vo.setShareCount(stat.getShareCount());
                 vo.setFavoriteCount(stat.getFavoriteCount());
             } else {
-                vo.setPlayCount(0L); vo.setLikeCount(0L); vo.setCommentCount(0L); vo.setShareCount(0L); vo.setFavoriteCount(0L);
+                vo.setPlayCount(0L);
+                vo.setLikeCount(0L);
+                vo.setCommentCount(0L);
+                vo.setShareCount(0L);
+                vo.setFavoriteCount(0L);
             }
 
             // 用户与视频交互状态
@@ -401,6 +476,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     }
 
     // ================= 辅助方法: Pipeline 批量读取 =================
+
     /**
      * 【最终版】批量从 Redis 获取视频统计数据
      * 策略：Cache Aside + 异步预热
@@ -445,8 +521,11 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
                 // 【关键】主线程先给个“假”数据 (0)，保证不报错、不阻塞
                 VideoStat zeroStat = new VideoStat();
                 zeroStat.setVideoId(vid);
-                zeroStat.setPlayCount(0L); zeroStat.setLikeCount(0L);
-                zeroStat.setCommentCount(0L); zeroStat.setShareCount(0L); zeroStat.setFavoriteCount(0L);
+                zeroStat.setPlayCount(0L);
+                zeroStat.setLikeCount(0L);
+                zeroStat.setCommentCount(0L);
+                zeroStat.setShareCount(0L);
+                zeroStat.setFavoriteCount(0L);
                 resultMap.put(vid, zeroStat);
             }
         }
@@ -512,6 +591,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     }
 
     // ================= 辅助方法: 从redis中读取统计数据 =================
+
     /**
      * 【核心】从 Redis 读取统计数据，如果没有则查 DB 并回写
      */

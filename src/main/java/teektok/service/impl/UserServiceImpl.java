@@ -24,6 +24,7 @@ import teektok.utils.JwtUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -152,7 +153,8 @@ public class UserServiceImpl implements IUserService {
 
         // 3. 写 Redis (设置 24 小时过期，防止冷数据长期占用)
         if (user != null) {
-            redisTemplate.opsForValue().set(key, user, 24, TimeUnit.HOURS);
+            long timeout = 24 * 60 * 60 + new Random().nextInt(3600); // 24小时 + 0~1小时随机
+            redisTemplate.opsForValue().set(key, user, timeout, TimeUnit.HOURS);
         } else {
             // 防止缓存穿透：存入空值（过期时间短一点，如 5 分钟）
              redisTemplate.opsForValue().set(key, new User(), 5, TimeUnit.MINUTES);

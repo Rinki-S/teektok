@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.VO.PageResult;
 import teektok.dto.audit.AdminLoginDTO;
@@ -36,6 +38,15 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
     @Autowired
     private VideoStatMapper videoStatMapper; // 需要操作视频统计数据表
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    // 定义 Key 前缀 (需与 User/Video 模块保持一致)
+    private static final String USER_INFO_KEY = "user:info:";
+    private static final String VIDEO_INFO_KEY = "video:info:";
+    private static final String VIDEO_STAT_KEY = "video:stat:";
+    private static final String RECOMMEND_HOT_KEY = "recommend:hot"; // 假设热门推荐有缓存 Key
 
     @Override
     public AdminLoginVO login(AdminLoginDTO dto) {
@@ -73,6 +84,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
         user.setStatus(status);
         userMapper.updateById(user);
+
+        redisTemplate.delete(USER_INFO_KEY + userId);
     }
 
     @Override
@@ -85,6 +98,15 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         video.setStatus(dto.getStatus());
 
         videoMapper.updateById(video);
+
+        // 【关键修复】删除视频详情缓存
+        redisTemplate.delete(VIDEO_INFO_KEY + dto.getVideoId());
+
+        // 如果审核不通过，可能还需要从热门列表、推荐列表中移除 (看业务需求)
+        if (dto.getStatus() != 1) {
+            // 清理热门缓存，让下次请求重新构建
+            redisTemplate.delete(RECOMMEND_HOT_KEY);
+        }
     }
 
     @Override
@@ -100,6 +122,15 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
                 .set(Video::getIsHot, hot ? 1 : 0);
 
         videoMapper.update(null, updateWrapper);
+
+        // 【关键修复】
+        // 1. 删除单体视频缓存 (更新 isHot 字段)
+        redisTemplate.delete(VIDEO_INFO_KEY + videoId);
+
+        // 2. 这里的操作直接影响“热门推荐列表”，必须清理热门列表缓存
+        // 假设 RecommendService 用了这个 Key 缓存 List<Video>
+        // 删除后，RecommendService 下次会查 DB 重新计算
+        redisTemplate.delete("recommend:hot:ids"); // 对应 RecommendServiceImpl 里的 Key
     }
 
     @Override
@@ -116,8 +147,12 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         // 3. 删除视频统计表数据 (VideoStat)
         videoStatMapper.deleteById(videoId);
 
-        // TODO: 后续可以继续在这里删除 user_behavior 表中关于该视频的记录
-        // userBehaviorMapper.delete(new LambdaQueryWrapper<UserBehavior>().eq(UserBehavior::getVideoId, videoId));
+        // 4. 如果有“热门列表”缓存，也要清理，防止列表里还能刷出这个已删视频
+        redisTemplate.delete("recommend:hot:ids");
+
+        // 5. 【新增】删除 Redis 中的视频详情缓存
+        // 这样下次 getDetail 会查库，发现没了，然后缓存“空对象”
+        redisTemplate.delete("video:info:" + videoId);
     }
 
     @Override

@@ -36,4 +36,10 @@ public interface IRelationService {
      * 检查是否关注
      */
     boolean isFollowing(Long userId, Long targetId);
+
+    /**
+     * 【新增】全量加载某个用户的关注列表到 Redis 缓存
+     * 通常用于缓存未命中时的异步构建
+     */
+    void loadUserFollowCache(Long userId);
 }
