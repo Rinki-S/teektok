@@ -20,6 +20,7 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
   const [isPaused, setIsPaused] = useState(true);
   const [progress, setProgress] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const scrubPointerIdRef = useRef<number | null>(null);
   const clickTimerRef = useRef<number | null>(null);
   const wasPlayingRef = useRef(false);
   const hasCountedPlayRef = useRef(false);
@@ -233,6 +234,7 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
     if (!isActive) return;
     const videoElement = videoRef.current;
     if (!videoElement) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -242,27 +244,38 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
     videoElement.pause();
 
     setIsScrubbing(true);
+    scrubPointerIdRef.current = e.pointerId;
     seekToClientX(e.clientX);
 
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
   };
 
   const handleScrubMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isScrubbing) return;
+    if (scrubPointerIdRef.current !== e.pointerId) return;
     e.preventDefault();
     e.stopPropagation();
     seekToClientX(e.clientX);
   };
 
   const handleScrubEnd = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isScrubbing) return;
+    if (scrubPointerIdRef.current !== e.pointerId) return;
     e.preventDefault();
     e.stopPropagation();
 
+    scrubPointerIdRef.current = null;
     setIsScrubbing(false);
 
     const videoElement = videoRef.current;
     if (!videoElement) return;
+
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
 
     if (wasPlayingRef.current) {
       void tryPlay({ muted: false });
@@ -317,7 +330,7 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
               onPointerMove={handleScrubMove}
               onPointerUp={handleScrubEnd}
               onPointerCancel={handleScrubEnd}
-              onPointerLeave={handleScrubEnd}
+              onLostPointerCapture={handleScrubEnd}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

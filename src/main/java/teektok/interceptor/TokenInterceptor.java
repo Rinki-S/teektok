@@ -9,6 +9,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import teektok.utils.BaseContext;
 import teektok.utils.JwtUtils;
 
+import java.io.PrintWriter;
+
 @Slf4j
 @Component
 public class TokenInterceptor implements HandlerInterceptor {
@@ -32,6 +34,10 @@ public class TokenInterceptor implements HandlerInterceptor {
         if(token==null||token.isEmpty()){
             log.info("令牌不存在，响应401");
             response.setStatus(401);
+            response.setContentType("application/json;charset=UTF-8");
+            PrintWriter writer = response.getWriter();
+            writer.write("{\"code\":401,\"msg\":\"未登录\",\"data\":null}");
+            writer.flush();
             return false;
         }
         //5.验证token合法性，非法则响应401
@@ -42,6 +48,10 @@ public class TokenInterceptor implements HandlerInterceptor {
         } catch (Exception e) {
             log.info("令牌非法，响应401");
             response.setStatus(401);
+            response.setContentType("application/json;charset=UTF-8");
+            PrintWriter writer = response.getWriter();
+            writer.write("{\"code\":401,\"msg\":\"令牌非法\",\"data\":null}");
+            writer.flush();
             return false;
         }
         //放行

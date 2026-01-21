@@ -200,9 +200,9 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
             // C. 填充互动状态
             if (currentUserId != null) {
                 // 判断点赞 (查 Redis Set)
-                vo.setIsLiked(Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(USER_LIKE_KEY + currentUserId, video.getId().toString())));
+                vo.setIsLiked(safeIsMember(USER_LIKE_KEY + currentUserId, video.getId().toString()));
                 // 判断收藏 (查 Redis Set)
-                vo.setIsFavorited(Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(USER_FAVORITE_KEY + currentUserId, video.getId().toString())));
+                vo.setIsFavorited(safeIsMember(USER_FAVORITE_KEY + currentUserId, video.getId().toString()));
                 // 判断关注 (查刚刚的 DB 结果)
                 vo.setIsFollowed(finalFollowedUploaderIds.contains(video.getUploaderId()));
             } else {
@@ -288,12 +288,10 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         if (currentUserId != null) {
             // A. 点赞状态：查 Redis Set
             // 注意：Redis Set 中存的是 String 类型的 videoId
-            Boolean isLiked = redisTemplate.opsForSet().isMember(USER_LIKE_KEY + currentUserId, videoId.toString());
-            vo.setIsLiked(Boolean.TRUE.equals(isLiked));
+            vo.setIsLiked(safeIsMember(USER_LIKE_KEY + currentUserId, videoId.toString()));
 
             // B. 收藏状态：查 Redis Set
-            Boolean isFavorited = redisTemplate.opsForSet().isMember(USER_FAVORITE_KEY + currentUserId, videoId.toString());
-            vo.setIsFavorited(Boolean.TRUE.equals(isFavorited));
+            vo.setIsFavorited(safeIsMember(USER_FAVORITE_KEY + currentUserId, videoId.toString()));
 
             // C. 关注状态：目前维持查 DB (因为 Relation 模块尚未实现纯 Redis 缓存)
             // 单次主键/索引查询性能尚可
@@ -377,12 +375,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
             Long currentUserId = BaseContext.getCurrentId();
             if (currentUserId != null) {
-                vo.setIsLiked(Boolean.TRUE.equals(
-                        redisTemplate.opsForSet().isMember(USER_LIKE_KEY + currentUserId, video.getId().toString())
-                ));
-                vo.setIsFavorited(Boolean.TRUE.equals(
-                        redisTemplate.opsForSet().isMember(USER_FAVORITE_KEY + currentUserId, video.getId().toString())
-                ));
+                vo.setIsLiked(safeIsMember(USER_LIKE_KEY + currentUserId, video.getId().toString()));
+                vo.setIsFavorited(safeIsMember(USER_FAVORITE_KEY + currentUserId, video.getId().toString()));
             } else {
                 vo.setIsLiked(false);
                 vo.setIsFavorited(false);
@@ -533,14 +527,20 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private Map<Long, VideoStat> batchGetVideoStatsFromRedis(List<Long> videoIds) {
         if (videoIds.isEmpty()) return Collections.emptyMap();
 
-        //使用executePipelined批量从redis中读取视频数据统计表的value到results中
-        List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (Long vid : videoIds) {
-                String key = VIDEO_STAT_KEY + vid;
-                connection.hGetAll(key.getBytes());
-            }
-            return null;
-        });
+        List<Object> results;
+        try {
+            results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                for (Long vid : videoIds) {
+                    String key = VIDEO_STAT_KEY + vid;
+                    connection.hGetAll(key.getBytes());
+                }
+                return null;
+            });
+        } catch (Exception ignored) {
+            List<VideoStat> dbStats = videoStatMapper.selectBatchIds(videoIds);
+            if (dbStats == null || dbStats.isEmpty()) return Collections.emptyMap();
+            return dbStats.stream().collect(Collectors.toMap(VideoStat::getVideoId, Function.identity()));
+        }
 
         //根据videoIds进行遍历，将数据写进Map<Long, VideoStat>
         Map<Long, VideoStat> resultMap = new HashMap<>();
@@ -621,13 +621,17 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private Map<Long, Boolean> batchGetInteractionStatus(String key, List<Long> videoIds) {
         if (videoIds.isEmpty()) return Collections.emptyMap();
 
-        //使用executePipelined批量查询
-        List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (Long vid : videoIds) {
-                connection.sIsMember(key.getBytes(), vid.toString().getBytes());
-            }
-            return null;
-        });
+        List<Object> results;
+        try {
+            results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                for (Long vid : videoIds) {
+                    connection.sIsMember(key.getBytes(), vid.toString().getBytes());
+                }
+                return null;
+            });
+        } catch (Exception ignored) {
+            return Collections.emptyMap();
+        }
 
         Map<Long, Boolean> map = new HashMap<>();
         for (int i = 0; i < videoIds.size(); i++) {
@@ -644,35 +648,46 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
      */
     private void fillVideoStatsFromRedis(VideoVO vo) {
         String key = VIDEO_STAT_KEY + vo.getVideoId();
-        Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+        try {
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
 
-        //写入VideoVO
-        if (!entries.isEmpty()) {
-            vo.setPlayCount(getLong(entries.get("playCount")));
-            vo.setLikeCount(getLong(entries.get("likeCount")));
-            vo.setCommentCount(getLong(entries.get("commentCount")));
-            vo.setShareCount(getLong(entries.get("shareCount")));
-            vo.setFavoriteCount(getLong(entries.get("favoriteCount")));
-        } else {
-            // 若redis中无记录，回源 DB
-            VideoStat stat = videoStatMapper.selectById(vo.getVideoId());
-            if (stat != null) {
-                vo.setPlayCount(stat.getPlayCount());
-                vo.setLikeCount(stat.getLikeCount());
-                vo.setCommentCount(stat.getCommentCount());
-                vo.setShareCount(stat.getShareCount());
-                vo.setFavoriteCount(stat.getFavoriteCount());
-
-                // 回写 Redis (过期时间 24小时)
-                Map<String, Object> map = new HashMap<>();
-                map.put("playCount", stat.getPlayCount());
-                map.put("likeCount", stat.getLikeCount());
-                map.put("commentCount", stat.getCommentCount());
-                map.put("shareCount", stat.getShareCount());
-                map.put("favoriteCount", stat.getFavoriteCount());
-                redisTemplate.opsForHash().putAll(key, map);
-                redisTemplate.expire(key, 24, TimeUnit.HOURS);
+            if (!entries.isEmpty()) {
+                vo.setPlayCount(getLong(entries.get("playCount")));
+                vo.setLikeCount(getLong(entries.get("likeCount")));
+                vo.setCommentCount(getLong(entries.get("commentCount")));
+                vo.setShareCount(getLong(entries.get("shareCount")));
+                vo.setFavoriteCount(getLong(entries.get("favoriteCount")));
+                return;
             }
+        } catch (Exception ignored) {
+        }
+
+        VideoStat stat = videoStatMapper.selectById(vo.getVideoId());
+        if (stat == null) {
+            vo.setPlayCount(0L);
+            vo.setLikeCount(0L);
+            vo.setCommentCount(0L);
+            vo.setShareCount(0L);
+            vo.setFavoriteCount(0L);
+            return;
+        }
+
+        vo.setPlayCount(stat.getPlayCount() == null ? 0L : stat.getPlayCount());
+        vo.setLikeCount(stat.getLikeCount() == null ? 0L : stat.getLikeCount());
+        vo.setCommentCount(stat.getCommentCount() == null ? 0L : stat.getCommentCount());
+        vo.setShareCount(stat.getShareCount() == null ? 0L : stat.getShareCount());
+        vo.setFavoriteCount(stat.getFavoriteCount() == null ? 0L : stat.getFavoriteCount());
+
+        try {
+            Map<String, Object> map = new HashMap<>();
+            map.put("playCount", vo.getPlayCount());
+            map.put("likeCount", vo.getLikeCount());
+            map.put("commentCount", vo.getCommentCount());
+            map.put("shareCount", vo.getShareCount());
+            map.put("favoriteCount", vo.getFavoriteCount());
+            redisTemplate.opsForHash().putAll(key, map);
+            redisTemplate.expire(key, 24, TimeUnit.HOURS);
+        } catch (Exception ignored) {
         }
     }
 
@@ -682,6 +697,14 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
             return Long.valueOf(obj.toString());
         } catch (NumberFormatException e) {
             return 0L;
+        }
+    }
+
+    private boolean safeIsMember(String key, String member) {
+        try {
+            return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(key, member));
+        } catch (Exception ignored) {
+            return false;
         }
     }
 }

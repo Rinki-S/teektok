@@ -124,7 +124,7 @@ async function requestOpenApi<T>(
         "msg" in parsed &&
         typeof (parsed as { msg?: unknown }).msg === "string"
         ? (parsed as { msg: string }).msg
-        : res.statusText || "Request failed";
+        : `${res.status || ""} ${res.statusText || "Request failed"}`.trim();
     throw new Error(msg);
   }
 
