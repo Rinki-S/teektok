@@ -234,53 +234,56 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
     if (!isActive) return;
     const videoElement = videoRef.current;
     if (!videoElement) return;
-    if (e.pointerType === "mouse" && e.button !== 0) return;
 
+    // 阻止事件冒泡和默认行为，防止触发父组件（VideoFeed）的拖拽翻页
     e.preventDefault();
     e.stopPropagation();
+    // 关键：阻止原生事件冒泡，防止 Framer Motion 通过原生监听捕获到事件
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
 
     interactionUnlockedRef.current = true;
     wasPlayingRef.current = !videoElement.paused;
     videoElement.pause();
 
     setIsScrubbing(true);
-    scrubPointerIdRef.current = e.pointerId;
     seekToClientX(e.clientX);
 
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {}
-  };
+    // 使用全局监听替代 setPointerCapture，以确保在任何位置松开鼠标都能正确结束
+    const handleWindowPointerMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault();
+      moveEvent.stopPropagation();
+      seekToClientX(moveEvent.clientX);
+    };
 
-  const handleScrubMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isScrubbing) return;
-    if (scrubPointerIdRef.current !== e.pointerId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    seekToClientX(e.clientX);
-  };
+    const handleWindowPointerUp = (upEvent: PointerEvent) => {
+      upEvent.preventDefault();
+      upEvent.stopPropagation();
+      
+      setIsScrubbing(false);
+      
+      // 清理全局监听
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerUp);
 
-  const handleScrubEnd = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (scrubPointerIdRef.current !== e.pointerId) return;
-    e.preventDefault();
-    e.stopPropagation();
+      const el = videoRef.current;
+      if (!el) return;
 
-    scrubPointerIdRef.current = null;
-    setIsScrubbing(false);
-
-    const videoElement = videoRef.current;
-    if (!videoElement) return;
-
-    try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+      if (wasPlayingRef.current) {
+        void tryPlay({ muted: false });
       }
-    } catch {}
+    };
 
-    if (wasPlayingRef.current) {
-      void tryPlay({ muted: false });
-    }
+    window.addEventListener("pointermove", handleWindowPointerMove, { passive: false });
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerUp);
   };
+
+  // 移除不再需要的局部事件处理器
+  // const handleScrubMove = ... 
+  // const handleScrubEnd = ...
 
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-black">
@@ -327,10 +330,6 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
               tabIndex={-1}
               className="h-[10px] w-full touch-none flex items-center"
               onPointerDown={handleScrubStart}
-              onPointerMove={handleScrubMove}
-              onPointerUp={handleScrubEnd}
-              onPointerCancel={handleScrubEnd}
-              onLostPointerCapture={handleScrubEnd}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
