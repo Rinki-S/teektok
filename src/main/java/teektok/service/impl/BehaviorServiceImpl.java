@@ -82,7 +82,8 @@ import java.util.function.Function;
     @Override
     public void play(Long videoId, Long userId) {
         // 1. Redis计数+1
-        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "playCount", 1);
+//        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "playCount", 1);
+        updateVideoStatSafe(videoId, "playCount", 1);
 
         // 2. 【核心优化】写入 Redis 缓冲 (给数据库同步用)
         // 使用 Hash 结构: Key=BUFFER_PLAY_KEY, Field=videoId, Value=增量
@@ -95,7 +96,7 @@ import java.util.function.Function;
 
         // 4. 发布kafka事件
         if (userId != null) {
-//            eventPublisher.publishPlayEvent(videoId, userId);
+            eventPublisher.publishPlayEvent(videoId, userId);
         }
     }
 
@@ -118,7 +119,7 @@ import java.util.function.Function;
             like.setCreateTime(LocalDateTime.now());
             videoLikeMapper.insert(like);
             // 【同步兜底】直接更新 DB 统计数据，保证数据一致性
-            videoStatMapper.incrLikeCount(videoId, 1);
+//            videoStatMapper.incrLikeCount(videoId, 1);
         } catch (Exception e) {
             log.warn("重复点赞 (DB已存在): uid={}, vid={}", userId, videoId);
         }
@@ -128,13 +129,14 @@ import java.util.function.Function;
 
         // 4. 更新 Redis
         redisTemplate.opsForSet().add(userLikeKey, videoId.toString());
-        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "likeCount", 1);
+//        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "likeCount", 1);
+        updateVideoStatSafe(videoId, "likeCount", 1);
 
         // 5. 异步记录流水
         asyncLogService.saveUserBehavior(userId, videoId, TYPE_LIKE);
 
         // 6. 发布事件
-//        eventPublisher.publishLikeEvent(videoId, userId);
+        eventPublisher.publishLikeEvent(videoId, userId);
     }
 
 
@@ -161,7 +163,8 @@ import java.util.function.Function;
             redisTemplate.opsForSet().remove(userLikeKey, videoId.toString());
 
             // 4. 更新 Redis 实时计数 (给前端展示用，立即 -1)
-            redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "likeCount", -1);
+//            redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "likeCount", -1);
+            updateVideoStatSafe(videoId, "likeCount", -1);
 
         } else {
             // 5. 兜底：如果 DB 没删掉记录，但 Redis 可能有脏数据，尝试清理一下
@@ -187,7 +190,7 @@ import java.util.function.Function;
             favorite.setCreateTime(LocalDateTime.now());
             videoFavoriteMapper.insert(favorite);
 
-            videoStatMapper.incrCollectCount(videoId, 1);
+//            videoStatMapper.incrCollectCount(videoId, 1);
         } catch (Exception e) {
             // Ignore
             e.printStackTrace();
@@ -198,13 +201,14 @@ import java.util.function.Function;
 
         // 4. 更新 Redis
         redisTemplate.opsForSet().add(userFavKey, videoId.toString());
-        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "favoriteCount", 1);
+//        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "favoriteCount", 1);
+        updateVideoStatSafe(videoId, "favoriteCount", 1);
 
         // 5. 异步记录流水
         asyncLogService.saveUserBehavior(userId, videoId, TYPE_FAVORITE);
 
         // 6. 发布事件
-//        eventPublisher.publishFavoriteEvent(videoId, userId);
+        eventPublisher.publishFavoriteEvent(videoId, userId);
     }
 
 
@@ -232,7 +236,8 @@ import java.util.function.Function;
             redisTemplate.opsForSet().remove(userFavKey, videoId.toString());
 
             // 4. 更新 Redis 实时计数 (给前端展示用，立即 -1)
-            redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "favoriteCount", -1);
+//            redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "favoriteCount", -1);
+            updateVideoStatSafe(videoId, "favoriteCount", -1);
         } else {
             // 5. 兜底：如果 DB 没删掉记录，但 Redis 可能有脏数据，尝试清理一下
             redisTemplate.opsForSet().remove(userFavKey, videoId.toString());
@@ -259,13 +264,14 @@ import java.util.function.Function;
 
         // 3. 更新redis缓存状态
         redisTemplate.opsForSet().add(userCommentKey, dto.getVideoId().toString());
-        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + dto.getVideoId(), "commentCount", 1);
+//        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + dto.getVideoId(), "commentCount", 1);
+        updateVideoStatSafe(dto.getVideoId(), "commentCount", 1);
 
         // 4. 异步记录流水
         asyncLogService.saveUserBehavior(userId, dto.getVideoId(), TYPE_COMMENT);
 
         // 5. 发布事件
-//        eventPublisher.publishCommentEvent(dto.getVideoId(), userId, dto.getContent());
+        eventPublisher.publishCommentEvent(dto.getVideoId(), userId, dto.getContent());
     }
 
     @Override
@@ -274,7 +280,8 @@ import java.util.function.Function;
         redisTemplate.opsForHash().increment(BUFFER_SHARE_KEY, videoId.toString(), 1);
 
         // 2. 更新redis缓存状态
-        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "shareCount", 1);
+//        redisTemplate.opsForHash().increment(VIDEO_STAT_KEY + videoId, "shareCount", 1);
+        updateVideoStatSafe(videoId, "shareCount", 1);
 
         // 3. 记录行为流水 (行为类型 5)
         if (userId != null && userId > 0) {
@@ -282,7 +289,7 @@ import java.util.function.Function;
         }
 
         // 4. 发布事件
-//        eventPublisher.publishShareEvent(videoId, userId);
+        eventPublisher.publishShareEvent(videoId, userId);
     }
 
 
@@ -389,9 +396,9 @@ import java.util.function.Function;
             return;
         }
 
-        // 3. 【核心优化】Redis 缓冲计数 +1
-        // 替代原有的 commentMapper.incrLikeCount(commentId, 1);
-        redisTemplate.opsForHash().increment(BUFFER_COMMENT_LIKE_KEY, commentId.toString(), 1);
+        // 3. 【修改-方案A】直接更新数据库，不走缓冲
+        // 因为评论点赞不像视频点赞那么高频，且为了前端立即看到变化（前端读取的是 DB）
+        commentMapper.incrLikeCount(commentId, 1);
 
         // 4. 更新 Redis 状态 (记录该用户点赞了这个评论)
         redisTemplate.opsForSet().add(userCommentLikeKey, commentId.toString());
@@ -411,8 +418,8 @@ import java.util.function.Function;
                 .eq(CommentLike::getUserId, userId));
 
         if (rows > 0) {
-            // 2. 【核心优化】Redis 缓冲计数 -1
-            redisTemplate.opsForHash().increment(BUFFER_COMMENT_LIKE_KEY, commentId.toString(), -1);
+            // 2. 【修改-方案A】直接更新数据库，不走缓冲
+            commentMapper.incrLikeCount(commentId, -1);
 
             // 3. 移除 Redis 状态
             redisTemplate.opsForSet().remove(userCommentLikeKey, commentId.toString());
@@ -445,9 +452,6 @@ import java.util.function.Function;
         try { syncBufferToDBUtil.syncBufferToDB(BUFFER_FAVORITE_KEY, "favorite_count"); } catch (Exception e) { log.error("同步收藏数失败", e); }
         try { syncBufferToDBUtil.syncBufferToDB(BUFFER_COMMENT_KEY, "comment_count"); } catch (Exception e) { log.error("同步评论数失败", e); }
         try { syncBufferToDBUtil.syncBufferToDB(BUFFER_SHARE_KEY, "share_count"); } catch (Exception e) { log.error("同步分享数失败", e); }
-
-        // 【新增】同步评论点赞数
-        try { syncCommentLikesToDB(); } catch (Exception e) { log.error("同步评论点赞数失败", e); }
     }
 
     /**
@@ -474,5 +478,51 @@ import java.util.function.Function;
             commentMapper.batchUpdateLikeCount(updateMap);
             log.info("同步评论点赞数据完成，条数: {}", updateMap.size());
         }
+    }
+
+    /**
+     * 【核心修复】安全更新 Redis 统计数据
+     * 如果 Key 不存在，先从 DB 加载完整数据，再应用增量。
+     * 防止 Key 过期后直接 increment 导致数据丢失（变成 1）。
+     */
+    private void updateVideoStatSafe(Long videoId, String field, long delta) {
+        String key = VIDEO_STAT_KEY + videoId;
+
+        // 1. 如果 Key 存在，直接累加
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+            redisTemplate.opsForHash().increment(key, field, delta);
+            return;
+        }
+
+        // 2. 如果 Key 不存在，说明过期了，需要“查库重建 + 应用增量”
+        VideoStat stat = videoStatMapper.selectById(videoId);
+        if (stat == null) {
+            // 防御性编程：如果 DB 也没记录（极少见），初始化一个 0
+            stat = new VideoStat();
+            stat.setVideoId(videoId);
+            stat.setPlayCount(0L);
+            stat.setLikeCount(0L);
+            stat.setCommentCount(0L);
+            stat.setShareCount(0L);
+            stat.setFavoriteCount(0L);
+            // 可以在这里 insert stat，视业务需求而定
+        }
+
+        // 3. 组装完整 Map
+        Map<String, String> map = new HashMap<>();
+        map.put("playCount", String.valueOf(stat.getPlayCount()));
+        map.put("likeCount", String.valueOf(stat.getLikeCount()));
+        map.put("commentCount", String.valueOf(stat.getCommentCount()));
+        map.put("shareCount", String.valueOf(stat.getShareCount()));
+        map.put("favoriteCount", String.valueOf(stat.getFavoriteCount()));
+
+        // 4. 【关键】在写入 Redis 前，手动应用当前的增量
+        // 例如：DB 里是 10，这次操作是 +1，那么写入 Redis 的应该是 11
+        long originalVal = Long.parseLong(map.getOrDefault(field, "0"));
+        map.put(field, String.valueOf(originalVal + delta));
+
+        // 5. 写入 Redis 并设置过期时间
+        redisTemplate.opsForHash().putAll(key, map);
+        redisTemplate.expire(key, 24, java.util.concurrent.TimeUnit.HOURS);
     }
 }

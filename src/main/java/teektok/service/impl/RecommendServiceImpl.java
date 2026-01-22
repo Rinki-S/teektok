@@ -62,6 +62,10 @@ public class RecommendServiceImpl implements IRecommendService {
             List<RecommendVideoVO> cachedList = (List<RecommendVideoVO>) redisTemplate.opsForValue().get(cacheKey);
             if (cachedList != null && !cachedList.isEmpty()) {
                 log.info("推荐接口命中缓存: {}", cacheKey);
+
+                // 【新增调用】这里是关键！拿到旧缓存后，立刻清洗一遍数据，变成最新的
+                hydrateRealTimeInfo(cachedList, userId);
+
                 return cachedList;
             }
         } catch (Exception e) {
@@ -270,5 +274,77 @@ public class RecommendServiceImpl implements IRecommendService {
             voList.add(vo);
         }
         return voList;
+    }
+
+    /**
+     * 【核心修复方法】
+     * 为推荐列表回填最新的实时数据（点赞状态、收藏状态、实时计数）。
+     * 解决 Redis 推荐缓存导致的点赞状态不更新问题。
+     *
+     * @param videoList 推荐视频列表 (从缓存取出的旧数据)
+     * @param userId    当前用户ID
+     */
+    private void hydrateRealTimeInfo(List<RecommendVideoVO> videoList, Long userId) {
+        if (videoList == null || videoList.isEmpty()) {
+            return;
+        }
+
+        // 定义常量 Key 前缀 (必须与 BehaviorService/VideoService 保持一致)
+        final String VIDEO_STAT_KEY_PREFIX = "video:stat:";
+        final String USER_LIKE_KEY_PREFIX = "user:like:";
+        final String USER_FAVORITE_KEY_PREFIX = "user:favorite:";
+
+        String userLikeKey = (userId != null) ? USER_LIKE_KEY_PREFIX + userId : null;
+        String userFavoriteKey = (userId != null) ? USER_FAVORITE_KEY_PREFIX + userId : null;
+
+        for (RecommendVideoVO vo : videoList) {
+            // RecommendVideoVO 使用 getId() 获取视频ID
+            String videoIdStr = vo.getId().toString();
+
+            // =================================================
+            // 1. 修正用户互动状态 (点赞/收藏)
+            // =================================================
+            if (userId != null) {
+                // 使用 stringRedisTemplate 判断 Set 中是否存在该 ID
+                Boolean isLiked = stringRedisTemplate.opsForSet().isMember(userLikeKey, videoIdStr);
+                vo.setIsLiked(Boolean.TRUE.equals(isLiked));
+
+                Boolean isFavorited = stringRedisTemplate.opsForSet().isMember(userFavoriteKey, videoIdStr);
+                vo.setIsFavorited(Boolean.TRUE.equals(isFavorited));
+            } else {
+                vo.setIsLiked(false);
+                vo.setIsFavorited(false);
+            }
+
+            // =================================================
+            // 2. 修正统计数据 (点赞数/评论数等)
+            // =================================================
+            // 从 Redis Hash (video:stat:xxx) 中读取最新值，覆盖缓存中的旧值
+            String statKey = VIDEO_STAT_KEY_PREFIX + videoIdStr;
+
+            // 获取各项实时数据
+            Object likeCount = stringRedisTemplate.opsForHash().get(statKey, "likeCount");
+            Object commentCount = stringRedisTemplate.opsForHash().get(statKey, "commentCount");
+            Object shareCount = stringRedisTemplate.opsForHash().get(statKey, "shareCount");
+            Object favoriteCount = stringRedisTemplate.opsForHash().get(statKey, "favoriteCount");
+
+            // 如果 Redis 有值则覆盖，否则保留原值 (防止 Redis 还没热起来导致显示 0)
+            if (likeCount != null) vo.setLikeCount(parseCount(likeCount));
+            if (commentCount != null) vo.setCommentCount(parseCount(commentCount));
+            if (shareCount != null) vo.setShareCount(parseCount(shareCount));
+            if (favoriteCount != null) vo.setFavoriteCount(parseCount(favoriteCount));
+        }
+    }
+
+    /**
+     * 辅助方法：安全转换 Object -> Long
+     */
+    private Long parseCount(Object val) {
+        if (val == null) return 0L;
+        try {
+            return Long.valueOf(val.toString());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 }
