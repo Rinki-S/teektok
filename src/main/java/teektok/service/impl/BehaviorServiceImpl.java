@@ -124,7 +124,7 @@ import java.util.function.Function;
         }
 
         // 3. 【暂存】Redis 缓冲计数 (已启用同步更新，暂时注释异步缓冲以防双重计数)
-        // redisTemplate.opsForHash().increment(BUFFER_LIKE_KEY, videoId.toString(), 1);
+         redisTemplate.opsForHash().increment(BUFFER_LIKE_KEY, videoId.toString(), 1);
 
         // 4. 更新 Redis
         redisTemplate.opsForSet().add(userLikeKey, videoId.toString());
