@@ -32,9 +32,13 @@ export interface VideoFeedProps {
   // Actions (kept here so each ShortCard can render its own overlays/actions)
   onLike: (videoId: string, isLiked: boolean) => void;
   onComment: (videoId: string) => void;
+  onCommentCreated?: (videoId: string) => void;
+  onCommentCountChange?: (videoId: string, total: number) => void;
   onBookmark: (videoId: string, isBookmarked: boolean) => void;
   onShare: (videoId: string) => void;
   onFollow: (userId: string, isFollowing: boolean) => void;
+
+  onEndReached?: () => void;
 }
 
 export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
@@ -45,9 +49,12 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
       onIndexChange,
       onLike,
       onComment,
+      onCommentCreated,
+      onCommentCountChange,
       onBookmark,
       onShare,
       onFollow,
+      onEndReached,
     }: VideoFeedProps,
     ref,
   ) {
@@ -156,14 +163,18 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
     );
 
     const goToNext = useCallback(() => {
-      if (!canGoNext || isAnimatingRef.current) return;
+      if (isAnimatingRef.current) return;
+      if (!canGoNext) {
+        onEndReached?.();
+        return;
+      }
       const h = heightRef.current || 0;
       if (h <= 0) {
         commitIndex(localIndex + 1);
         return;
       }
       void snapTo(-h, localIndex + 1);
-    }, [canGoNext, commitIndex, localIndex, snapTo]);
+    }, [canGoNext, commitIndex, localIndex, onEndReached, snapTo]);
 
     const goToPrev = useCallback(() => {
       if (!canGoPrev || isAnimatingRef.current) return;
@@ -305,9 +316,12 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
       const threshold = Math.min(180, h * 0.22);
 
       // Dragging up => negative offset => go next (stage snaps to -h)
-      if ((offsetY < -threshold || vY < -700) && canGoNext) {
-        void snapTo(-h, localIndex + 1);
-        return;
+      if (offsetY < -threshold || vY < -700) {
+        if (canGoNext) {
+          void snapTo(-h, localIndex + 1);
+          return;
+        }
+        onEndReached?.();
       }
 
       // Dragging down => positive offset => go prev (stage snaps to +h)
@@ -346,6 +360,8 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
                   isActive={false}
                   onLike={onLike}
                   onComment={onComment}
+                  onCommentCreated={onCommentCreated}
+                  onCommentCountChange={onCommentCountChange}
                   onBookmark={onBookmark}
                   onShare={onShare}
                   onFollow={onFollow}
@@ -366,6 +382,8 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
                   isActive={true}
                   onLike={onLike}
                   onComment={onComment}
+                  onCommentCreated={onCommentCreated}
+                  onCommentCountChange={onCommentCountChange}
                   onBookmark={onBookmark}
                   onShare={onShare}
                   onFollow={onFollow}
@@ -389,6 +407,8 @@ export const VideoFeed = React.forwardRef<VideoFeedHandle, VideoFeedProps>(
                   isActive={false}
                   onLike={onLike}
                   onComment={onComment}
+                  onCommentCreated={onCommentCreated}
+                  onCommentCountChange={onCommentCountChange}
                   onBookmark={onBookmark}
                   onShare={onShare}
                   onFollow={onFollow}

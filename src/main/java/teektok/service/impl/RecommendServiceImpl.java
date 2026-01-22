@@ -51,32 +51,38 @@ public class RecommendServiceImpl implements IRecommendService {
     private static final String REDIS_KEY_PREFIX = "user:recommend:v2:";
 
     @Override
-    public List<RecommendVideoVO> getPersonalRecommendFeed(Long userId, int page, int size) {
+    public List<RecommendVideoVO> getPersonalRecommendFeed(Long userId, int page, int size, Long refresh) {
+        int safePage = Math.max(1, page);
+        int safeSize = Math.max(1, size);
+        boolean bypassCache = refresh != null;
         // 定义缓存 Key，区分登录用户和游客，以及页码
-        String cacheKey = REDIS_KEY_PREFIX + (userId == null ? "guest" : userId) + ":" + page;
+        String cacheKey = REDIS_KEY_PREFIX + (userId == null ? "guest" : userId) + ":" + safePage;
 
         // ================== 1. 查询 Redis 缓存 ==================
         //优先从redis中查询推荐列表
-        try {
-            // 尝试从缓存获取
-            List<RecommendVideoVO> cachedList = (List<RecommendVideoVO>) redisTemplate.opsForValue().get(cacheKey);
-            if (cachedList != null && !cachedList.isEmpty()) {
-                log.info("推荐接口命中缓存: {}", cacheKey);
+        if (!bypassCache) {
+            try {
+                // 尝试从缓存获取
+                List<RecommendVideoVO> cachedList = (List<RecommendVideoVO>) redisTemplate.opsForValue().get(cacheKey);
+                if (cachedList != null && !cachedList.isEmpty()) {
+                    log.info("推荐接口命中缓存: {}", cacheKey);
 
-                // 【新增调用】这里是关键！拿到旧缓存后，立刻清洗一遍数据，变成最新的
-                hydrateRealTimeInfo(cachedList, userId);
+                    // 【新增调用】这里是关键！拿到旧缓存后，立刻清洗一遍数据，变成最新的
+                    hydrateRealTimeInfo(cachedList, userId);
 
-                return cachedList;
+                    return cachedList;
+                }
+            } catch (Exception e) {
+                // 缓存挂了不能影响主业务，记录日志即可
+                log.error("Redis 读取异常", e);
             }
-        } catch (Exception e) {
-            // 缓存挂了不能影响主业务，记录日志即可
-            log.error("Redis 读取异常", e);
         }
 
         // ================== 2. 查询 MySQL  ==================
         // 计算分页 offset
-        int offset = (page - 1) * size;
-        String limitSql = "LIMIT " + offset + ", " + size;
+        int offset = (safePage - 1) * safeSize;
+        String limitSql = "LIMIT " + offset + ", " + safeSize;
+        String limitSqlFirstPage = "LIMIT 0, " + safeSize;
 
         // 1. 获取推荐的 Video ID 列表
         List<Long> videoIds = Collections.emptyList();
@@ -120,6 +126,41 @@ public class RecommendServiceImpl implements IRecommendService {
                     .collect(Collectors.toList());
         }
 
+        if (videoIds.isEmpty() && safePage > 1 && userId != null && userId > 0) {
+            List<RecommendationResult> results = null;
+            try {
+                results = recommendationMapper.selectList(
+                        new LambdaQueryWrapper<RecommendationResult>()
+                                .eq(RecommendationResult::getUserId, userId)
+                                .eq(RecommendationResult::getType, "REALTIME")
+                                .orderByDesc(RecommendationResult::getScore)
+                                .last(limitSqlFirstPage)
+                );
+            } catch (Exception e) {
+                System.err.println("[RECOMMEND] 实时推荐查询失败: " + e.getMessage());
+                results = null;
+            }
+
+            if (results == null || results.isEmpty()) {
+                try {
+                    results = recommendationMapper.selectList(
+                            new LambdaQueryWrapper<RecommendationResult>()
+                                    .eq(RecommendationResult::getUserId, userId)
+                                    .eq(RecommendationResult::getType, "OFFLINE")
+                                    .orderByDesc(RecommendationResult::getScore)
+                                    .last(limitSqlFirstPage)
+                    );
+                } catch (Exception e) {
+                    System.err.println("[RECOMMEND] 离线推荐查询失败: " + e.getMessage());
+                    results = Collections.emptyList();
+                }
+            }
+
+            videoIds = results.stream()
+                    .map(RecommendationResult::getMovieId)
+                    .collect(Collectors.toList());
+        }
+
         // 3. 兜底策略 (冷启动)：如果没查到 ID，或者是游客，则查最新/热门视频
         if (videoIds.isEmpty()) {
             List<Video> fallbackVideos = videoMapper.selectList(
@@ -132,6 +173,17 @@ public class RecommendServiceImpl implements IRecommendService {
             videoIds = fallbackVideos.stream().map(Video::getId).collect(Collectors.toList());
         }
 
+        if (videoIds.isEmpty() && safePage > 1) {
+            List<Video> fallbackVideos = videoMapper.selectList(
+                    new LambdaQueryWrapper<Video>()
+                            .eq(Video::getIsHot, 1)
+                            .eq(Video::getIsDeleted, 0)
+                            .orderByDesc(Video::getCreateTime)
+                            .last(limitSqlFirstPage)
+            );
+            videoIds = fallbackVideos.stream().map(Video::getId).collect(Collectors.toList());
+        }
+
         if (videoIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -140,7 +192,7 @@ public class RecommendServiceImpl implements IRecommendService {
         List<RecommendVideoVO> resultList = buildVOs(videoIds, userId);
 
         // ================== 3. 写入 Redis 缓存 ==================
-        if (!resultList.isEmpty()) {
+        if (!resultList.isEmpty() && !bypassCache) {
             try {
                 // 存入缓存，设置过期时间 (例如 10 分钟)，防止推荐内容长时间不更新
                 redisTemplate.opsForValue().set(cacheKey, resultList, 10, TimeUnit.MINUTES);
@@ -155,21 +207,48 @@ public class RecommendServiceImpl implements IRecommendService {
     }
 
     @Override
-    public List<RecommendVideoVO> getHotRecommendFeed(Long userId, int page, int size) {
+    public List<RecommendVideoVO> getHotRecommendFeed(Long userId, int page, int size, Long refresh) {
         // 1. 获取推荐的 Video ID 列表
         List<Long> videoIds = Collections.emptyList();
 
-        int offset = (page - 1) * size;
-        String limitSql = "LIMIT " + offset + ", " + size;
+        int safePage = Math.max(1, page);
+        int safeSize = Math.max(1, size);
+
+        Long total = videoMapper.selectCount(
+                new LambdaQueryWrapper<Video>()
+                        .eq(Video::getIsHot, 1)
+                        .eq(Video::getIsDeleted, 0)
+        );
+        if (total == null || total <= 0) return Collections.emptyList();
+
+        long baseShift = refresh == null ? 0 : Math.floorMod(refresh, total);
+        long rawOffset = baseShift + (long) (safePage - 1) * safeSize;
+        int offset = (int) Math.floorMod(rawOffset, total);
 
         // 2.查视频表(取is_hot=1)
-        List<Video> result = videoMapper.selectList(
+        int firstLimit = (int) Math.min(safeSize, total - offset);
+        List<Video> result = new ArrayList<>();
+
+        List<Video> first = videoMapper.selectList(
                 new LambdaQueryWrapper<Video>()
                         .eq(Video::getIsHot, 1)
                         .eq(Video::getIsDeleted, 0)
                         .orderByDesc(Video::getCreateTime)
-                        .last(limitSql)
+                        .last("LIMIT " + offset + ", " + firstLimit)
         );
+        if (first != null) result.addAll(first);
+
+        int remain = safeSize - result.size();
+        if (remain > 0) {
+            List<Video> second = videoMapper.selectList(
+                    new LambdaQueryWrapper<Video>()
+                            .eq(Video::getIsHot, 1)
+                            .eq(Video::getIsDeleted, 0)
+                            .orderByDesc(Video::getCreateTime)
+                            .last("LIMIT 0, " + remain)
+            );
+            if (second != null) result.addAll(second);
+        }
 
         //3. 提取视频ID列表
         videoIds = result.stream().map(Video::getId).collect(Collectors.toList());

@@ -21,29 +21,41 @@ import type {
   AdminVideoHotRequest,
   AdminVideoDeleteParams,
   PageResult,
-  VideoVO,
+  AdminVideoVO,
   VideoAnalysisData,
 } from "@/types/api";
 
 export type VideoListQuery = {
   page: number;
   size: number;
+  status?: number;
+  isHot?: number;
 };
 
 /**
- * GET /api/video/list
+ * GET /api/admin/video/list
  */
 export async function getVideoList(
   query: VideoListQuery,
-): Promise<PageResult<VideoVO>> {
+): Promise<PageResult<AdminVideoVO>> {
   const params = new URLSearchParams({
     page: String(query.page),
-    size: String(query.size),
+    pageSize: String(query.size),
   });
 
-  return apiClient.get<PageResult<VideoVO>>(
-    `/api/video/list?${params.toString()}`,
+  if (typeof query.status === "number") params.set("status", String(query.status));
+  if (typeof query.isHot === "number") params.set("isHot", String(query.isHot));
+
+  return apiClient.get<PageResult<AdminVideoVO>>(
+    `/api/admin/video/list?${params.toString()}`,
   );
+}
+
+/**
+ * GET /api/admin/video/{id}
+ */
+export async function getVideoDetail(videoId: number): Promise<AdminVideoVO> {
+  return apiClient.get<AdminVideoVO>(`/api/admin/video/${videoId}`);
 }
 
 /**

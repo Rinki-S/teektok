@@ -26,15 +26,20 @@ interface CommentsSheetProps {
   videoId: string;
   children?: React.ReactNode;
   triggerAsChild?: boolean;
+  onCommentCreated?: () => void;
+  onCommentCountChange?: (total: number) => void;
 }
 
 export function CommentsSheet({
   videoId,
   children,
   triggerAsChild = false,
+  onCommentCreated,
+  onCommentCountChange,
 }: CommentsSheetProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [comments, setComments] = React.useState<Comment[]>([]);
+  const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -53,14 +58,16 @@ export function CommentsSheet({
     setLoading(true);
     try {
       // 简单起见，目前只加载第一页，后续可加分页
-      const { list } = await getComments(videoId, 1, 50);
+      const { list, total } = await getComments(videoId, 1, 50);
       setComments(list);
+      setTotal(total);
+      onCommentCountChange?.(total);
     } catch (error) {
       console.error("Failed to load comments:", error);
     } finally {
       setLoading(false);
     }
-  }, [videoId]);
+  }, [videoId, onCommentCountChange]);
 
   // 打开时加载
   React.useEffect(() => {
@@ -76,6 +83,7 @@ export function CommentsSheet({
     setSubmitting(true);
     try {
       await createComment(videoId, inputValue, replyTo?.id);
+      onCommentCreated?.();
       setInputValue("");
       setReplyTo(null); // 清除回复状态
       // 重新加载评论
@@ -262,7 +270,7 @@ export function CommentsSheet({
       <SheetContent side="bottom" className="!h-[75vh] flex flex-col min-h-0 overflow-hidden p-0 gap-0 rounded-t-xl max-w-lg mx-auto">
         <SheetHeader className="p-4 border-b relative flex flex-row items-center justify-center min-h-[60px]">
           <SheetTitle className="text-center text-sm font-bold">
-            {comments.length > 0 ? `${comments.length} 条评论` : "评论"}
+            {total > 0 ? `${total} 条评论` : "评论"}
           </SheetTitle>
         </SheetHeader>
 

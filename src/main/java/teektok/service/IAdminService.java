@@ -3,6 +3,7 @@ package teektok.service;
 import teektok.VO.PageResult;
 import teektok.dto.audit.AdminLoginDTO;
 import teektok.dto.audit.AdminLoginVO;
+import teektok.dto.audit.AdminVideoVO;
 import teektok.dto.audit.VideoAuditDTO;
 import teektok.entity.User;
 
@@ -40,4 +41,8 @@ public interface IAdminService {
      * @return 分页结果
      */
     PageResult<User> getUserList(Integer page, Integer pageSize);
+
+    PageResult<AdminVideoVO> getVideoList(Integer page, Integer pageSize, Integer status, Integer isHot);
+
+    AdminVideoVO getVideoDetail(Long videoId);
 }

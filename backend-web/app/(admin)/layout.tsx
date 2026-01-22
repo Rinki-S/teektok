@@ -150,7 +150,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </header>
 
           <main className="min-h-0 flex-1 overflow-auto">
-            <div className="mx-auto w-full max-w-6xl px-4 py-6">{children}</div>
+            <div className="mx-auto w-full max-w-screen-2xl px-4 py-6">
+              {children}
+            </div>
           </main>
         </div>
       </div>

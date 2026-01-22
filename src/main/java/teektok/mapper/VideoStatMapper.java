@@ -2,10 +2,13 @@ package teektok.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
+import teektok.dto.analysis.VideoAnalysisVO;
 import teektok.entity.VideoStat;
 
 import java.util.Map;
+import java.util.Collection;
 
 @Mapper
 public interface VideoStatMapper extends BaseMapper<VideoStat> {
@@ -42,4 +45,9 @@ public interface VideoStatMapper extends BaseMapper<VideoStat> {
     // 使用 Case When 语法进行批量更新
     // 示例 SQL: UPDATE video_stat SET play_count = play_count + CASE video_id WHEN 1 THEN 10 WHEN 2 THEN 5 END WHERE video_id IN (1, 2)
     void batchUpdateStat(@Param("stats") Map<Long, Integer> stats, @Param("field") String field);
+
+    void batchInsertIgnore(@Param("videoIds") Collection<Long> videoIds);
+
+    @Select("SELECT COALESCE(SUM(play_count),0) AS playCount, COALESCE(SUM(like_count),0) AS likeCount, COALESCE(SUM(comment_count),0) AS commentCount FROM video_stat")
+    VideoAnalysisVO sumAll();
 }

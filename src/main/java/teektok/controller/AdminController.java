@@ -70,4 +70,22 @@ public class AdminController {
         PageResult<User> result = adminService.getUserList(page, pageSize);
         return Result.success(result);
     }
+
+    @Operation(summary = "获取视频列表（管理端）")
+    @GetMapping("/video/list")
+    public Result<PageResult<AdminVideoVO>> getVideoList(
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "status", required = false) Integer status,
+            @RequestParam(value = "isHot", required = false) Integer isHot
+    ) {
+        PageResult<AdminVideoVO> result = adminService.getVideoList(page, pageSize, status, isHot);
+        return Result.success(result);
+    }
+
+    @Operation(summary = "获取视频详情（管理端）")
+    @GetMapping("/video/{id}")
+    public Result<AdminVideoVO> getVideoDetail(@PathVariable("id") Long id) {
+        return Result.success(adminService.getVideoDetail(id));
+    }
 }

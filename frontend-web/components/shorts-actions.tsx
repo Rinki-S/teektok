@@ -15,6 +15,8 @@ interface ShortsActionsProps {
   video: Video;
   onLike: (videoId: string, isLiked: boolean) => void;
   onComment: (videoId: string) => void;
+  onCommentCreated?: (videoId: string) => void;
+  onCommentCountChange?: (videoId: string, total: number) => void;
   onBookmark: (videoId: string, isBookmarked: boolean) => void;
   onShare: (videoId: string) => void;
   onFollow: (userId: string, isFollowing: boolean) => void;
@@ -24,6 +26,8 @@ export function ShortsActions({
   video,
   onLike,
   onComment,
+  onCommentCreated,
+  onCommentCountChange,
   onBookmark,
   onShare,
   onFollow,
@@ -138,7 +142,12 @@ export function ShortsActions({
 
       {/* 评论 */}
       <div className="flex flex-col items-center">
-        <CommentsSheet videoId={video.id} triggerAsChild>
+        <CommentsSheet
+          videoId={video.id}
+          triggerAsChild
+          onCommentCreated={() => onCommentCreated?.(video.id)}
+          onCommentCountChange={(total) => onCommentCountChange?.(video.id, total)}
+        >
           <Button
             variant="ghost"
             className="rounded-full w-14 h-14"

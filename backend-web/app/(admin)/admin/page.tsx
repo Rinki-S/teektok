@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,11 +50,9 @@ export default function AdminDashboardPage() {
     ] as const;
   }, [state]);
 
-  async function load() {
+  const load = useCallback(async () => {
     setState({ status: "loading" });
     try {
-      // According to docs:
-      // GET /analysis/video -> { code:200, data:{ playCount, likeCount, commentCount } }
       const data = await getVideoAnalysis();
       setState({ status: "success", data });
     } catch (e) {
@@ -62,13 +60,16 @@ export default function AdminDashboardPage() {
         e instanceof Error ? e.message : "加载失败（后端接口尚未实现或不可达）";
       setState({ status: "error", message });
     }
-  }
+  }, []);
 
   useEffect(() => {
-    // Initial load for dashboard metrics.
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const id = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [load]);
 
   return (
     <div className="space-y-6">

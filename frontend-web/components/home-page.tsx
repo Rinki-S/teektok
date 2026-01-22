@@ -20,6 +20,8 @@ export function HomePage({
     handleFollow,
     handleShare,
     handleComment,
+    handleCommentCreated,
+    handleCommentCountChange,
     loadMoreVideos,
   } = useVideoFeed(undefined, feedType);
 
@@ -28,6 +30,7 @@ export function HomePage({
 
   // Imperative control of the feed so external UI (right-side navigator) can trigger animations.
   const feedRef = useRef<VideoFeedHandle | null>(null);
+  const lastPrefetchLengthRef = useRef<number>(-1);
 
   // Fallbacks: keep these in case the ref isn't ready yet.
   const goToNextFallback = useCallback(() => {
@@ -78,7 +81,12 @@ export function HomePage({
 
   useEffect(() => {
     // 提前加载：当用户看到倒数第 3 个视频时，触发加载下一页
-    if (videos.length > 0 && currentIndex >= videos.length - 3) {
+    if (
+      videos.length > 0 &&
+      currentIndex >= videos.length - 3 &&
+      lastPrefetchLengthRef.current !== videos.length
+    ) {
+      lastPrefetchLengthRef.current = videos.length;
       loadMoreVideos();
     }
   }, [currentIndex, videos.length, loadMoreVideos]);
@@ -133,6 +141,9 @@ export function HomePage({
           onFollow={handleFollow}
           onShare={handleShare}
           onComment={handleComment}
+          onCommentCreated={handleCommentCreated}
+          onCommentCountChange={handleCommentCountChange}
+          onEndReached={loadMoreVideos}
         />
       </div>
     </div>

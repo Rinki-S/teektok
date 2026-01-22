@@ -19,4 +19,3 @@ public class GlobalExceptionHandler {
         return Result.fail(500, "服务器异常");
     }
 }
-

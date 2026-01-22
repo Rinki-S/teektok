@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Video } from "@/types/video";
 import {
   getVideoFeed,
@@ -25,6 +25,8 @@ interface UseVideoFeedReturn {
   handleFollow: (userId: string, isFollowing: boolean) => Promise<void>;
   handleShare: (videoId: string) => Promise<void>;
   handleComment: (videoId: string) => void;
+  handleCommentCreated: (videoId: string) => void;
+  handleCommentCountChange: (videoId: string, total: number) => void;
   setCurrentIndex: (index: number) => void;
   loadMoreVideos: () => Promise<void>;
 }
@@ -40,14 +42,9 @@ export function useVideoFeed(
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
+  const refreshSeqRef = useRef(0);
 
-  // 初始加载视频
-  useEffect(() => {
-    loadVideos();
-  }, [initialVideoId]);
-
-  // 加载视频列表
-  const loadVideos = async () => {
+  const loadVideos = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -85,15 +82,65 @@ export function useVideoFeed(
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [feedType, initialVideoId]);
+
+  useEffect(() => {
+    void loadVideos();
+  }, [loadVideos]);
 
   // 加载更多视频
   const loadMoreVideos = async () => {
     if (initialVideoId) return; // 单视频模式不加载更多
-    if (!hasMore || isLoading || isLoadingMore) return;
+    if (isLoading || isLoadingMore) return;
 
     try {
       setIsLoadingMore(true);
+
+      const refreshIfNeeded = async () => {
+        if (feedType === "default") return;
+
+        refreshSeqRef.current += 1;
+        const refreshKey = `${Date.now()}-${refreshSeqRef.current}`;
+
+        let refreshed;
+        if (feedType === "recommend") {
+          const userId = getCurrentUserId();
+          if (userId) {
+            refreshed = await getRecommendFeed(userId, undefined, 10, refreshKey);
+          } else {
+            refreshed = await getHotFeed(undefined, 10, refreshKey);
+          }
+        } else {
+          refreshed = await getHotFeed(undefined, 10, refreshKey);
+        }
+
+        if (!refreshed.videos.length) {
+          setHasMore(false);
+          setNextCursor(undefined);
+          return;
+        }
+
+        setVideos((prev) => {
+          const seen = new Set(prev.map((v) => v.id));
+          const merged = [...prev];
+          let added = 0;
+          for (const v of refreshed.videos) {
+            if (!seen.has(v.id)) {
+              seen.add(v.id);
+              merged.push(v);
+              added += 1;
+            }
+          }
+          return added > 0 ? merged : [...prev, ...refreshed.videos];
+        });
+        setNextCursor(refreshed.nextCursor);
+        setHasMore(refreshed.hasMore);
+      };
+
+      if (!hasMore) {
+        await refreshIfNeeded();
+        return;
+      }
 
       let response;
       if (feedType === "recommend") {
@@ -111,7 +158,24 @@ export function useVideoFeed(
         response = await getVideoFeed(nextCursor, 10);
       }
 
-      setVideos((prev) => [...prev, ...response.videos]);
+      if (!response.videos.length) {
+        await refreshIfNeeded();
+        return;
+      }
+
+      setVideos((prev) => {
+        const seen = new Set(prev.map((v) => v.id));
+        const merged = [...prev];
+        let added = 0;
+        for (const v of response.videos) {
+          if (!seen.has(v.id)) {
+            seen.add(v.id);
+            merged.push(v);
+            added += 1;
+          }
+        }
+        return added > 0 ? merged : [...prev, ...response.videos];
+      });
       setNextCursor(response.nextCursor);
       setHasMore(response.hasMore);
     } catch (err) {
@@ -264,6 +328,39 @@ export function useVideoFeed(
     console.log("Comment section opened for video:", videoId);
   }, []);
 
+  const handleCommentCreated = useCallback((videoId: string) => {
+    setVideos((prev) =>
+      prev.map((video) =>
+        video.id === videoId
+          ? {
+              ...video,
+              stats: {
+                ...video.stats,
+                comments: (video.stats.comments || 0) + 1,
+              },
+            }
+          : video,
+      ),
+    );
+  }, []);
+
+  const handleCommentCountChange = useCallback((videoId: string, total: number) => {
+    if (!Number.isFinite(total) || total < 0) return;
+    setVideos((prev) =>
+      prev.map((video) =>
+        video.id === videoId
+          ? {
+              ...video,
+              stats: {
+                ...video.stats,
+                comments: total,
+              },
+            }
+          : video,
+      ),
+    );
+  }, []);
+
   return {
     videos,
     currentIndex,
@@ -275,6 +372,8 @@ export function useVideoFeed(
     handleFollow,
     handleShare,
     handleComment,
+    handleCommentCreated,
+    handleCommentCountChange,
     setCurrentIndex,
     loadMoreVideos,
   };

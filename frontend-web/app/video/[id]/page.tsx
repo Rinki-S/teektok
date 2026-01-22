@@ -20,6 +20,8 @@ export default function VideoDetailPage() {
     handleFollow,
     handleShare,
     handleComment,
+    handleCommentCreated,
+    handleCommentCountChange,
     setCurrentIndex,
   } = useVideoFeed(id);
 
@@ -59,6 +61,8 @@ export default function VideoDetailPage() {
           onFollow={handleFollow}
           onShare={handleShare}
           onComment={handleComment}
+          onCommentCreated={handleCommentCreated}
+          onCommentCountChange={handleCommentCountChange}
         />
       </div>
     </div>

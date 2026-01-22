@@ -171,8 +171,13 @@ export class ApiClient {
     const headers = new Headers(init.headers ?? {});
     const token = await readToken(this.tokenProvider);
     if (token) {
-      headers.set("token", token);
-      headers.set("Authorization", `Bearer ${token}`);
+      const purePath = path.split("?")[0] ?? path;
+      const isAdminApi = purePath === "/api/admin" || purePath.startsWith("/api/admin/");
+      if (isAdminApi) {
+        if (!headers.has("token")) headers.set("token", token);
+        if (!headers.has("Authorization"))
+          headers.set("Authorization", `Bearer ${token}`);
+      }
     }
 
     let body: BodyInit | undefined = undefined;

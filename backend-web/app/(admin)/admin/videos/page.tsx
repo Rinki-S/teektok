@@ -37,29 +37,21 @@ import {
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-  approveVideo,
   deleteVideo as deleteVideoApi,
   getVideoList,
   markVideoHot,
-  rejectVideo,
 } from "@/services/videoAdminService";
-import type { VideoVO } from "@/types/api";
+import type { AdminVideoVO } from "@/types/api";
 import { cn } from "@/lib/utils";
 import {
-  CheckCircle2,
-  ClipboardCheck,
   Flame,
+  ClipboardCheck,
   RefreshCw,
   ShieldAlert,
   Trash2,
-  XCircle,
 } from "lucide-react";
 
-type VideoRow = VideoVO & {
-  likeCount?: number;
-  auditStatus?: 0 | 1 | 2; // UI hint only; backend list does not provide in docs
-  isHot?: 0 | 1; // UI hint only; backend list does not provide in docs
-};
+type VideoRow = AdminVideoVO;
 
 type LoadState =
   | { status: "idle" | "loading" }
@@ -82,17 +74,6 @@ function parseId(value: unknown): number | null {
     return Number.isFinite(n) ? n : null;
   }
   return null;
-}
-
-function buildMockNotes(items: VideoVO[]): VideoRow[] {
-  // Docs for GET /video/list only return { videoId, title, playCount } in the example.
-  // For admin moderation UI we still show columns for "hot" & "audit actions" and initialize
-  // client-only state to make UI interactive even before backend adds these fields.
-  return items.map((v) => ({
-    ...v,
-    auditStatus: 0,
-    isHot: 0,
-  }));
 }
 
 // Pagination helper: simple page window for UI.
@@ -145,9 +126,7 @@ export default function AdminVideosPage() {
     setState({ status: "loading" });
     try {
       const result = await getVideoList({ page, size });
-      // We cannot be sure list contains audit/hot fields; initialize UI state.
-      const rows = buildMockNotes(result.list ?? []);
-      setState({ status: "success", items: rows });
+      setState({ status: "success", items: result.list ?? [] });
 
       const nextTotalPages = Math.max(1, Math.ceil((result.total ?? 0) / size));
       setTotalPages(nextTotalPages);
@@ -183,33 +162,9 @@ export default function AdminVideosPage() {
     });
   }
 
-  async function onApprove(videoId: number) {
-    setPending(videoId, { audit: true });
-    try {
-      // Docs: POST /admin/video/audit { videoId, status: 1 }
-      await approveVideo(videoId);
-      updateLocal(videoId, (r) => ({ ...r, auditStatus: 1 }));
-    } finally {
-      setPending(videoId, { audit: false });
-    }
-  }
-
-  async function onReject(videoId: number) {
-    setPending(videoId, { audit: true });
-    try {
-      // Docs: POST /admin/video/audit { videoId, status: 0 }
-      await rejectVideo(videoId);
-      updateLocal(videoId, (r) => ({ ...r, auditStatus: 2 }));
-    } finally {
-      setPending(videoId, { audit: false });
-    }
-  }
-
   async function onToggleHot(videoId: number, nextHot: 0 | 1) {
     setPending(videoId, { hot: true });
     try {
-      // Docs: POST /admin/video/hot
-      // Body is not specified in docs; we send { videoId, isHot } as defined in types.
       await markVideoHot(videoId, nextHot);
       updateLocal(videoId, (r) => ({ ...r, isHot: nextHot }));
     } finally {
@@ -245,7 +200,7 @@ export default function AdminVideosPage() {
         <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold">视频管理</h1>
           <div className="mt-1 text-sm text-muted-foreground">
-            文档接口：<span className="font-mono">GET /video/list</span>、{" "}
+            接口：<span className="font-mono">GET /api/admin/video/list</span>、{" "}
             <span className="font-mono">POST /admin/video/audit</span>、{" "}
             <span className="font-mono">POST /admin/video/hot</span>、{" "}
             <span className="font-mono">
@@ -342,8 +297,9 @@ export default function AdminVideosPage() {
                   <TableHead>标题</TableHead>
                   <TableHead className="w-[140px] text-right">播放量</TableHead>
                   <TableHead className="w-[160px]">热门</TableHead>
-                  <TableHead className="w-[200px]">审核</TableHead>
-                  <TableHead className="w-[140px] text-right">操作</TableHead>
+                  <TableHead className="w-[200px]">状态</TableHead>
+                  <TableHead className="w-[140px]">审核</TableHead>
+                  <TableHead className="w-[220px] text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -351,7 +307,7 @@ export default function AdminVideosPage() {
                 {state.status === "loading" ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       加载中…
@@ -362,7 +318,7 @@ export default function AdminVideosPage() {
                 {state.status === "success" && filteredItems.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       暂无数据
@@ -375,28 +331,14 @@ export default function AdminVideosPage() {
                       const videoId = row.videoId;
                       const pending = pendingById[videoId] ?? {};
 
-                      const auditBadge = (() => {
-                        // UI-only badge; docs don't provide from list.
-                        if (row.auditStatus === 1)
-                          return (
-                            <Badge className="gap-1" variant="secondary">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              已通过
-                            </Badge>
-                          );
-                        if (row.auditStatus === 2)
-                          return (
-                            <Badge className="gap-1" variant="destructive">
-                              <XCircle className="h-3.5 w-3.5" />
-                              已拒绝
-                            </Badge>
-                          );
-                        return (
-                          <Badge className="gap-1" variant="outline">
-                            待审核
-                          </Badge>
+                      const auditBadge =
+                        row.status === 1 ? (
+                          <Badge variant="secondary">已通过</Badge>
+                        ) : row.status === 2 ? (
+                          <Badge variant="destructive">已拒绝</Badge>
+                        ) : (
+                          <Badge variant="outline">待审核</Badge>
                         );
-                      })();
 
                       return (
                         <TableRow key={videoId}>
@@ -435,69 +377,56 @@ export default function AdminVideosPage() {
                           </TableCell>
 
                           <TableCell>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {auditBadge}
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={!!pending.audit}
-                                onClick={() => void onApprove(videoId)}
-                              >
-                                通过
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={!!pending.audit}
-                                onClick={() => void onReject(videoId)}
-                              >
-                                拒绝
-                              </Button>
-                            </div>
+                            {auditBadge}
+                          </TableCell>
+
+                          <TableCell>
+                            <Button asChild type="button" size="sm" variant="outline">
+                              <Link href={`/admin/videos/${videoId}/audit`}>审核</Link>
+                            </Button>
                           </TableCell>
 
                           <TableCell className="text-right">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="destructive"
-                                  disabled={!!pending.del}
-                                  className="gap-2"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  删除
-                                </Button>
-                              </AlertDialogTrigger>
-
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    确认删除该视频？
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    将调用文档接口：{" "}
-                                    <span className="font-mono">
-                                      DELETE /admin/video/delete/{videoId}
-                                    </span>
-                                    。此操作不可逆（后端若实现逻辑删除，可在服务端控制）。
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>取消</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => void onDelete(videoId)}
-                                    className={cn("gap-2")}
+                            <div className="flex justify-end gap-2">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="destructive"
+                                    disabled={!!pending.del}
+                                    className="gap-2"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                     删除
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      确认删除该视频？
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      将调用接口：{" "}
+                                      <span className="font-mono">
+                                        DELETE /admin/video/delete/{videoId}
+                                      </span>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => void onDelete(videoId)}
+                                      className={cn("gap-2")}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      删除
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -566,11 +495,8 @@ export default function AdminVideosPage() {
           </div>
 
           <div className="text-xs text-muted-foreground">
-            备注：由于文档未定义视频列表包含<b>审核状态</b>、<b>是否热门</b>与
-            <b>总条数</b>等字段，
-            本页面对这些字段使用了前端本地状态来演示管理流程。等后端实现时，只需要让{" "}
-            <span className="font-mono">GET /video/list</span>{" "}
-            返回更多字段或增加管理端列表接口即可。
+            <span className="font-mono">status</span>：0待审核 / 1通过 / 2拒绝，
+            <span className="font-mono">isHot</span>：0否 / 1是
           </div>
         </CardContent>
       </Card>

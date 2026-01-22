@@ -24,9 +24,10 @@ public class RecommendController {
     public Result<List<RecommendVideoVO>> getFeed(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long refresh) {
         // 如果前端没传 userId，说明是游客，Service 会自动走兜底逻辑
-        List<RecommendVideoVO> list = recommendService.getPersonalRecommendFeed(userId, page, size);
+        List<RecommendVideoVO> list = recommendService.getPersonalRecommendFeed(userId, page, size, refresh);
         return Result.success(list);
     }
 
@@ -35,10 +36,11 @@ public class RecommendController {
     public Result<List<RecommendVideoVO>> getHot(
             @RequestParam(required = false) Long userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long refresh) {
         Long currentUserId = BaseContext.getCurrentId();
         if (currentUserId == null) currentUserId = userId;
-        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(currentUserId, page, size);
+        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(currentUserId, page, size, refresh);
         return Result.success(list);
     }
 }

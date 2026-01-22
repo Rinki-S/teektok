@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="teektok.mapper.VideoStatMapper">
+    <insert id="batchInsertIgnore">
+        INSERT IGNORE INTO video_stat (video_id, like_count, play_count, comment_count, share_count, favorite_count)
+        VALUES
+        <foreach collection="videoIds" item="id" separator=",">
+            (#{id}, 0, 0, 0, 0, 0)
+        </foreach>
+    </insert>
+
     <update id="batchUpdateStat">
         UPDATE video_stat
         SET ${field} = ${field} +

@@ -7,16 +7,16 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.VO.PageResult;
 import teektok.dto.audit.AdminLoginDTO;
 import teektok.dto.audit.AdminLoginVO;
+import teektok.dto.audit.AdminVideoVO;
 import teektok.dto.audit.VideoAuditDTO;
-import teektok.dto.commen.ResultCode;
 import teektok.entity.Admin;
 import teektok.entity.User;
 import teektok.entity.Video;
+import teektok.entity.VideoStat;
 import teektok.mapper.AdminMapper;
 import teektok.mapper.UserMapper;
 import teektok.mapper.VideoMapper;
@@ -25,7 +25,11 @@ import teektok.service.IAdminService;
 import teektok.utils.JwtUtils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -95,7 +99,11 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
             throw new RuntimeException("视频不存在");
         }
 
-        video.setStatus(dto.getStatus());
+        if (Objects.equals(dto.getStatus(), 1)) {
+            video.setStatus(1);
+        } else {
+            video.setStatus(2);
+        }
 
         videoMapper.updateById(video);
 
@@ -166,5 +174,110 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         // 3. 封装为项目通用的 PageResult 并返回
         return new PageResult<>(pageInfo.getRecords(), pageInfo.getTotal());
     }
-}
 
+    @Override
+    public PageResult<AdminVideoVO> getVideoList(Integer page, Integer pageSize, Integer status, Integer isHot) {
+        try {
+            Page<Video> pageInfo = new Page<>(page, pageSize);
+
+            LambdaQueryWrapper<Video> wrapper = new LambdaQueryWrapper<>();
+            if (status != null) {
+                wrapper.eq(Video::getStatus, status);
+            }
+            if (isHot != null) {
+                wrapper.eq(Video::getIsHot, isHot);
+            }
+            wrapper.orderByDesc(Video::getCreateTime);
+
+            videoMapper.selectPage(pageInfo, wrapper);
+
+            List<Video> videos = pageInfo.getRecords();
+            if (videos == null || videos.isEmpty()) {
+                return new PageResult<>(List.of(), pageInfo.getTotal());
+            }
+
+            Set<Long> videoIds = videos.stream().map(Video::getId).collect(Collectors.toSet());
+            List<VideoStat> stats = videoIds.isEmpty() ? List.of() : videoStatMapper.selectBatchIds(videoIds);
+            Map<Long, VideoStat> statMap = stats.stream()
+                    .filter(Objects::nonNull)
+                    .filter(s -> s.getVideoId() != null)
+                    .collect(Collectors.toMap(VideoStat::getVideoId, s -> s, (a, b) -> a));
+
+            List<AdminVideoVO> list = videos.stream().map(v -> {
+                AdminVideoVO vo = new AdminVideoVO();
+                vo.setVideoId(v.getId());
+                vo.setTitle(v.getTitle());
+                vo.setVideoUrl(v.getVideoUrl());
+                vo.setCoverUrl(v.getCoverUrl());
+                vo.setDescription(v.getDescription());
+                vo.setUploaderId(v.getUploaderId());
+                vo.setStatus(v.getStatus());
+                vo.setIsHot(v.getIsHot());
+                vo.setIsDeleted(v.getIsDeleted());
+                vo.setCreateTime(v.getCreateTime());
+                vo.setUpdateTime(v.getUpdateTime());
+
+                VideoStat st = statMap.get(v.getId());
+                if (st != null) {
+                    vo.setPlayCount(st.getPlayCount());
+                    vo.setLikeCount(st.getLikeCount());
+                    vo.setCommentCount(st.getCommentCount());
+                    vo.setShareCount(st.getShareCount());
+                    vo.setFavoriteCount(st.getFavoriteCount());
+                } else {
+                    vo.setPlayCount(0L);
+                    vo.setLikeCount(0L);
+                    vo.setCommentCount(0L);
+                    vo.setShareCount(0L);
+                    vo.setFavoriteCount(0L);
+                }
+
+                return vo;
+            }).collect(Collectors.toList());
+
+            return new PageResult<>(list, pageInfo.getTotal());
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            if (msg == null || msg.isBlank()) msg = e.getClass().getSimpleName();
+            throw new RuntimeException("获取视频列表失败: " + msg, e);
+        }
+    }
+
+    @Override
+    public AdminVideoVO getVideoDetail(Long videoId) {
+        Video video = videoMapper.selectById(videoId);
+        if (video == null) {
+            throw new RuntimeException("视频不存在");
+        }
+        VideoStat stat = videoStatMapper.selectById(videoId);
+
+        AdminVideoVO vo = new AdminVideoVO();
+        vo.setVideoId(video.getId());
+        vo.setTitle(video.getTitle());
+        vo.setVideoUrl(video.getVideoUrl());
+        vo.setCoverUrl(video.getCoverUrl());
+        vo.setDescription(video.getDescription());
+        vo.setUploaderId(video.getUploaderId());
+        vo.setStatus(video.getStatus());
+        vo.setIsHot(video.getIsHot());
+        vo.setIsDeleted(video.getIsDeleted());
+        vo.setCreateTime(video.getCreateTime());
+        vo.setUpdateTime(video.getUpdateTime());
+
+        if (stat != null) {
+            vo.setPlayCount(stat.getPlayCount());
+            vo.setLikeCount(stat.getLikeCount());
+            vo.setCommentCount(stat.getCommentCount());
+            vo.setShareCount(stat.getShareCount());
+            vo.setFavoriteCount(stat.getFavoriteCount());
+        } else {
+            vo.setPlayCount(0L);
+            vo.setLikeCount(0L);
+            vo.setCommentCount(0L);
+            vo.setShareCount(0L);
+            vo.setFavoriteCount(0L);
+        }
+
+        return vo;
+    }
+}

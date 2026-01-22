@@ -158,6 +158,27 @@ export interface VideoListParams {
 
 export type VideoListResponse = ApiResponse<PageResult<VideoVO>>;
 
+export interface AdminVideoVO {
+  videoId: number;
+  title: string;
+  videoUrl?: string | null;
+  coverUrl?: string | null;
+  description?: string | null;
+  uploaderId?: number | null;
+  status?: number;
+  isHot?: number;
+  isDeleted?: number;
+  createTime?: string;
+  updateTime?: string;
+  playCount?: number;
+  likeCount?: number;
+  commentCount?: number;
+  shareCount?: number;
+  favoriteCount?: number;
+}
+
+export type AdminVideoListResponse = ApiResponse<PageResult<AdminVideoVO>>;
+
 export interface UserLoginRequest {
   username: string;
   password: string;

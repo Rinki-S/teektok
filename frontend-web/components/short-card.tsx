@@ -12,6 +12,8 @@ export interface ShortCardProps {
   // Actions
   onLike: (videoId: string, isLiked: boolean) => void;
   onComment: (videoId: string) => void;
+  onCommentCreated?: (videoId: string) => void;
+  onCommentCountChange?: (videoId: string, total: number) => void;
   onBookmark: (videoId: string, isBookmarked: boolean) => void;
   onShare: (videoId: string) => void;
   onFollow: (userId: string, isFollowing: boolean) => void;
@@ -45,6 +47,8 @@ export function ShortCard({
   isActive,
   onLike,
   onComment,
+  onCommentCreated,
+  onCommentCountChange,
   onBookmark,
   onShare,
   onFollow,
@@ -75,6 +79,8 @@ export function ShortCard({
             video={video}
             onLike={onLike}
             onComment={onComment}
+            onCommentCreated={onCommentCreated}
+            onCommentCountChange={onCommentCountChange}
             onBookmark={onBookmark}
             onShare={onShare}
             onFollow={onFollow}

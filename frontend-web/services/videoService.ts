@@ -292,12 +292,14 @@ export async function getRecommendFeed(
   userId: string,
   cursor?: string,
   limit: number = 10,
+  refresh?: string,
 ): Promise<VideoListResponse> {
   const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
   const params = new URLSearchParams({
     page: String(page),
     size: String(limit),
   });
+  if (refresh) params.set("refresh", refresh);
 
   // GET /api/recommend/{userId}?page=...&size=...
   const data = await requestOpenApi<VideoVO[]>(
@@ -318,9 +320,7 @@ export async function getRecommendFeed(
     return mapVideoVOToVideo(vo);
   });
 
-  // If we got items, assume there might be more
-  // If we got fewer than limit, we know there's no more
-  const hasMore = items.length === limit;
+  const hasMore = items.length > 0;
 
   return {
     videos,
@@ -332,12 +332,14 @@ export async function getRecommendFeed(
 export async function getHotFeed(
   cursor?: string,
   limit: number = 10,
+  refresh?: string,
 ): Promise<VideoListResponse> {
   const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
   const params = new URLSearchParams({
     page: String(page),
     size: String(limit),
   });
+  if (refresh) params.set("refresh", refresh);
   const userId = getCurrentUserId();
   if (userId) params.set("userId", userId);
 
@@ -360,7 +362,7 @@ export async function getHotFeed(
     return mapVideoVOToVideo(vo);
   });
 
-  const hasMore = items.length === limit;
+  const hasMore = items.length > 0;
 
   return {
     videos,

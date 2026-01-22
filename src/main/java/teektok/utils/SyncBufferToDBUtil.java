@@ -58,6 +58,7 @@ public class SyncBufferToDBUtil {
 
             // 4. 落库
             if (!updateMap.isEmpty()) {
+                videoStatMapper.batchInsertIgnore(updateMap.keySet());
                 videoStatMapper.batchUpdateStat(updateMap, dbField);
             }
         } finally {
