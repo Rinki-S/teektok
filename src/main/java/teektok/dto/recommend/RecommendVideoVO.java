@@ -31,6 +31,12 @@ public class RecommendVideoVO {
     @Schema(description = "分享数")
     private Long shareCount;
 
+    @Schema(description = "用户是否点赞该视频")
+    private Boolean IsLiked;
+
+    @Schema(description = "用户是否点赞该视频")
+    private Boolean IsFavorited;
+
 
 
 }

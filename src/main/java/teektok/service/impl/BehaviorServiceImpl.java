@@ -435,7 +435,7 @@ import java.util.function.Function;
      */
     @Scheduled(fixedRate = 5000)
     public void syncVideoStatsToDB() {
-        log.info("开始同步视频统计数据...");
+//        log.info("开始同步视频统计数据...");
         syncBufferToDBUtil.syncBufferToDB(BUFFER_PLAY_KEY, "play_count");
         syncBufferToDBUtil.syncBufferToDB(BUFFER_LIKE_KEY, "like_count");
         syncBufferToDBUtil.syncBufferToDB(BUFFER_FAVORITE_KEY, "favorite_count");

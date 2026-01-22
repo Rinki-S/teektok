@@ -28,8 +28,8 @@ public class RecommendController {
 
     @Operation(summary = "获取热门推荐视频流")
     @GetMapping("/hot")
-    public Result<List<RecommendVideoVO>> getHot() {
-        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed();
+    public Result<List<RecommendVideoVO>> getHot(@PathVariable Long userId) {
+        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(userId);
         return Result.success(list);
     }
 }
