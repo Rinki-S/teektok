@@ -14,6 +14,7 @@ import type {
   FollowUserRequest,
   Comment,
 } from "@/types/video";
+import type { NotificationItem } from "@/types/notification";
 import { toast } from "sonner";
 
 // OpenAPI paths already include `/api` prefix.
@@ -753,4 +754,97 @@ export async function searchUsers(
     { method: "GET" },
   );
   return data || [];
+}
+
+export async function getNotifications(
+  page: number = 1,
+  size: number = 20,
+): Promise<{ list: NotificationItem[]; total: number }> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<NotificationItem>>(
+    `/api/notification/list?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  return {
+    list: data?.list ?? [],
+    total: data?.total ?? 0,
+  };
+}
+
+export async function getNotificationUnreadCount(): Promise<number> {
+  const data = await requestOpenApi<number>("/api/notification/unread/count", {
+    method: "GET",
+  });
+  return Number(data ?? 0);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await requestOpenApi<void>("/api/notification/read/all", {
+    method: "POST",
+  });
+}
+
+export async function markNotificationRead(id: number): Promise<void> {
+  if (!Number.isFinite(id)) return;
+  await requestOpenApi<void>(`/api/notification/read/${id}`, {
+    method: "POST",
+  });
+}
+
+type DmMessage = {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  msgType: number;
+  content?: string;
+  videoId?: number;
+  isRead?: number;
+  createTime?: string;
+};
+
+export async function sendDm(input: {
+  targetId: number;
+  msgType: 1 | 2;
+  content?: string;
+  videoId?: number;
+}): Promise<void> {
+  if (!Number.isFinite(input.targetId)) throw new Error("Invalid targetId");
+
+  await requestOpenApi<void>("/api/dm/send", {
+    method: "POST",
+    body: JSON.stringify({
+      targetId: input.targetId,
+      msgType: input.msgType,
+      content: input.content,
+      videoId: input.videoId,
+    }),
+  });
+}
+
+export async function getDmSessionMessages(
+  targetId: number,
+  page: number = 1,
+  size: number = 50,
+): Promise<{ list: DmMessage[]; total: number }> {
+  if (!Number.isFinite(targetId)) throw new Error("Invalid targetId");
+
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<DmMessage>>(
+    `/api/dm/session/${targetId}?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  return {
+    list: data?.list ?? [],
+    total: data?.total ?? 0,
+  };
 }

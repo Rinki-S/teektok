@@ -127,9 +127,14 @@ export default function FriendsPage() {
                     <span className="text-xs text-muted-foreground">ID: {user.id}</span>
                   </div>
                 </Link>
-                <Button variant="outline" size="sm" disabled>
-                  朋友
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/dm/${user.id}`}>私信</Link>
+                  </Button>
+                  <Button variant="secondary" size="sm" disabled>
+                    朋友
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

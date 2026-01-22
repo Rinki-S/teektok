@@ -258,18 +258,25 @@ export default function FollowingPage() {
                         </span>
                       </div>
                     </Link>
-                    <Button
-                      variant={user.isFollowing ? "secondary" : "default"}
-                      size="sm"
-                      disabled={Boolean(pendingUserIds[user.id])}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        void handleToggleFollowFromSearch(user.id, !user.isFollowing);
-                      }}
-                    >
-                      {user.isFollowing ? "已关注" : "关注"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {user.isFollowing ? (
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/dm/${user.id}`}>私信</Link>
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant={user.isFollowing ? "secondary" : "default"}
+                        size="sm"
+                        disabled={Boolean(pendingUserIds[user.id])}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleToggleFollowFromSearch(user.id, !user.isFollowing);
+                        }}
+                      >
+                        {user.isFollowing ? "已关注" : "关注"}
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -303,17 +310,22 @@ export default function FollowingPage() {
                     <span className="text-xs text-muted-foreground">ID: {user.id}</span>
                   </div>
                 </Link>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void handleUnfollow(user.id);
-                  }}
-                >
-                  已关注
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/dm/${user.id}`}>私信</Link>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void handleUnfollow(user.id);
+                    }}
+                  >
+                    已关注
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

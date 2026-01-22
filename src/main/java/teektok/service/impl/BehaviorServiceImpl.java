@@ -15,6 +15,7 @@ import teektok.entity.*;
 import teektok.mapper.*;
 import teektok.service.BehaviorEventPubliser;
 import teektok.service.IBehaviorService;
+import teektok.service.INotificationService;
 import teektok.utils.BaseContext;
 
 import java.time.LocalDateTime;
@@ -47,6 +48,10 @@ import java.util.function.Function;
     private BehaviorEventPubliser eventPublisher;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private VideoMapper videoMapper;
+    @Autowired
+    private INotificationService notificationService;
     @Autowired
     private SyncBufferToDBUtil syncBufferToDBUtil;
     @Autowired
@@ -137,6 +142,11 @@ import java.util.function.Function;
 
         // 6. 发布事件
         eventPublisher.publishLikeEvent(videoId, userId);
+
+        Video video = videoMapper.selectById(videoId);
+        if (video != null && video.getUploaderId() != null) {
+            notificationService.createNotification(video.getUploaderId(), userId, 2, 2, videoId, null);
+        }
     }
 
 
@@ -256,6 +266,7 @@ import java.util.function.Function;
         comment.setUserId(userId);
         comment.setContent(dto.getContent());
         comment.setStatus(0);
+        comment.setParentId(dto.getParentId());
         comment.setCreateTime(LocalDateTime.now());
         commentMapper.insert(comment);
 
@@ -272,6 +283,19 @@ import java.util.function.Function;
 
         // 5. 发布事件
         eventPublisher.publishCommentEvent(dto.getVideoId(), userId, dto.getContent());
+
+        String content = truncateNotificationContent(dto.getContent());
+        if (dto.getParentId() != null) {
+            Comment parent = commentMapper.selectById(dto.getParentId());
+            if (parent != null && parent.getUserId() != null) {
+                notificationService.createNotification(parent.getUserId(), userId, 3, 3, parent.getId(), content);
+                return;
+            }
+        }
+        Video video = videoMapper.selectById(dto.getVideoId());
+        if (video != null && video.getUploaderId() != null) {
+            notificationService.createNotification(video.getUploaderId(), userId, 3, 2, dto.getVideoId(), content);
+        }
     }
 
     @Override
@@ -406,6 +430,18 @@ import java.util.function.Function;
         // 注意：评论列表通常没有像 Video 那样单独的 Cached 实体，
         // 所以这里不需要像 video 那样去 update "video:stat:id"。
         // 前端展示的计数在 listComments 里处理。
+
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment != null && comment.getUserId() != null) {
+            notificationService.createNotification(comment.getUserId(), userId, 2, 3, commentId, null);
+        }
+    }
+
+    private String truncateNotificationContent(String content) {
+        if (content == null) return null;
+        String trimmed = content.trim();
+        if (trimmed.isEmpty()) return null;
+        return trimmed.length() <= 120 ? trimmed : trimmed.substring(0, 120);
     }
 
     @Override

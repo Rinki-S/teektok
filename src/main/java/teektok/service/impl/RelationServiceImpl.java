@@ -9,6 +9,7 @@ import teektok.entity.Relation;
 import teektok.entity.User;
 import teektok.mapper.RelationMapper;
 import teektok.mapper.UserMapper;
+import teektok.service.INotificationService;
 import teektok.service.IRelationService;
 
 import java.time.LocalDateTime;
@@ -30,6 +31,9 @@ public class RelationServiceImpl extends ServiceImpl<RelationMapper, Relation> i
 
     @Autowired
     private StringRedisTemplate redisTemplate;
+
+    @Autowired
+    private INotificationService notificationService;
 
     // Redis Key 前缀: user:follow:{userId} -> Set<targetId>
     private static final String USER_FOLLOW_KEY = "user:follow:";
@@ -61,6 +65,8 @@ public class RelationServiceImpl extends ServiceImpl<RelationMapper, Relation> i
                 long timeout = 24 * 60 * 60 + new Random().nextInt(3600); // 24小时 + 0~1小时随机
                 redisTemplate.expire(key, timeout, TimeUnit.HOURS);
             }
+
+            notificationService.createNotification(targetId, userId, 1, 1, userId, null);
         }
     }
 

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { CommentsSheet } from "@/components/comments-sheet";
 import { ShareSheet } from "@/components/share-sheet";
 import { toast } from "sonner";
-import { getCurrentUserId } from "@/services/videoService";
+import { getCurrentUserId, sendDm } from "@/services/videoService";
 import Link from "next/link";
 
 interface ShortsActionsProps {
@@ -84,10 +84,21 @@ export function ShortsActions({
     }
   };
 
-  const handleShareToFriend = () => {
-    // 模拟好友分享
-    toast.success("已分享给好友 (模拟)");
-    handleShareAction();
+  const handleShareToFriend = async (targetUserId: number) => {
+    if (!checkLogin()) return;
+    const videoId = Number(video.id);
+    if (!Number.isFinite(videoId)) {
+      toast.error("无效的视频ID");
+      return;
+    }
+
+    try {
+      await sendDm({ targetId: targetUserId, msgType: 2, videoId });
+      toast.success("已分享给好友");
+      handleShareAction();
+    } catch (e) {
+      console.error("Failed to share via dm", e);
+    }
   };
 
   const formatCount = (count: number): string => {
