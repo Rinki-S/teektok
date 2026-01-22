@@ -20,7 +20,8 @@ import type {
   AdminVideoAuditRequest,
   AdminVideoHotRequest,
   AdminVideoDeleteParams,
-  VideoListItem,
+  PageResult,
+  VideoVO,
   VideoAnalysisData,
 } from "@/types/api";
 
@@ -30,26 +31,18 @@ export type VideoListQuery = {
 };
 
 /**
- * GET /api/api/video/list
- *
- * OpenAPI shows a single query parameter named `videoQueryDTO` (object with page/size).
- * For typical Spring binding, this usually maps to:
- *   videoQueryDTO.page=1&videoQueryDTO.size=10
- *
- * Docs example returns:
- * { code: 200, data: [ { videoId, title, playCount } ] }
+ * GET /api/video/list
  */
 export async function getVideoList(
   query: VideoListQuery,
-): Promise<VideoListItem[]> {
+): Promise<PageResult<VideoVO>> {
   const params = new URLSearchParams({
-    "videoQueryDTO.page": String(query.page),
-    "videoQueryDTO.size": String(query.size),
+    page: String(query.page),
+    size: String(query.size),
   });
 
-  // apiClient returns the `data` portion of the envelope.
-  return apiClient.get<VideoListItem[]>(
-    `/api/api/video/list?${params.toString()}`,
+  return apiClient.get<PageResult<VideoVO>>(
+    `/api/video/list?${params.toString()}`,
   );
 }
 

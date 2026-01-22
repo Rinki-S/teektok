@@ -43,7 +43,7 @@ import {
   markVideoHot,
   rejectVideo,
 } from "@/services/videoAdminService";
-import type { VideoListItem } from "@/types/api";
+import type { VideoVO } from "@/types/api";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
@@ -55,7 +55,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-type VideoRow = VideoListItem & {
+type VideoRow = VideoVO & {
   likeCount?: number;
   auditStatus?: 0 | 1 | 2; // UI hint only; backend list does not provide in docs
   isHot?: 0 | 1; // UI hint only; backend list does not provide in docs
@@ -84,7 +84,7 @@ function parseId(value: unknown): number | null {
   return null;
 }
 
-function buildMockNotes(items: VideoListItem[]): VideoRow[] {
+function buildMockNotes(items: VideoVO[]): VideoRow[] {
   // Docs for GET /video/list only return { videoId, title, playCount } in the example.
   // For admin moderation UI we still show columns for "hot" & "audit actions" and initialize
   // client-only state to make UI interactive even before backend adds these fields.
@@ -144,18 +144,13 @@ export default function AdminVideosPage() {
   async function load() {
     setState({ status: "loading" });
     try {
-      const items = await getVideoList({ page, size });
+      const result = await getVideoList({ page, size });
       // We cannot be sure list contains audit/hot fields; initialize UI state.
-      const rows = buildMockNotes(items);
+      const rows = buildMockNotes(result.list ?? []);
       setState({ status: "success", items: rows });
 
-      // Without backend total, we'll assume "unknown"; keep 1 page unless the page returned full size.
-      // This is a UX heuristic only.
-      const inferredTotalPages =
-        rows.length === size
-          ? Math.max(totalPages, page + 1)
-          : Math.max(1, page);
-      setTotalPages(inferredTotalPages);
+      const nextTotalPages = Math.max(1, Math.ceil((result.total ?? 0) / size));
+      setTotalPages(nextTotalPages);
     } catch (e) {
       const message =
         e instanceof Error ? e.message : "加载失败（后端接口尚未实现或不可达）";

@@ -17,6 +17,11 @@ export interface ApiResponse<TData = unknown> {
 // This helper keeps it type-safe while being tolerant.
 export type ApiResponseNoData = Omit<ApiResponse<never>, "data"> & { data?: never };
 
+export interface PageResult<T> {
+  list: T[];
+  total: number;
+}
+
 // ------------------------------------------------------------
 // Admin module types (docs section 6)
 // ------------------------------------------------------------
@@ -42,7 +47,7 @@ export type AdminLoginResponse = ApiResponse<AdminLoginData>;
 // 6.2 冻结/解封用户
 // POST /admin/user/status
 // Request: { "userId": 1, "status": 0 }
-// status: 0 冻结, 1 正常
+// status: 0 正常, 1 冻结
 export type UserStatus = 0 | 1;
 
 export interface AdminUserStatusRequest {
@@ -106,4 +111,150 @@ export interface VideoAnalysisData {
   playCount: number;
   likeCount: number;
   commentCount: number;
+}
+
+// ------------------------------------------------------------
+// Backend entities / VOs (derived from actual backend code)
+// ------------------------------------------------------------
+
+export interface UserEntity {
+  id: number;
+  username: string;
+  avatar?: string | null;
+  status: number;
+  createTime?: string;
+}
+
+export interface VideoVO {
+  videoId: number;
+  title: string;
+  videoUrl?: string | null;
+  coverUrl?: string | null;
+  playCount?: number;
+  likeCount?: number;
+  commentCount?: number;
+  shareCount?: number;
+  favoriteCount?: number;
+  isLiked?: boolean | null;
+  isFavorited?: boolean | null;
+  isFollowed?: boolean | null;
+  description?: string | null;
+  uploaderId?: number | null;
+  uploaderName?: string | null;
+  uploaderAvatar?: string | null;
+}
+
+export interface AdminUserListParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export type AdminUserListResponse = ApiResponse<PageResult<UserEntity>>;
+
+export interface VideoListParams {
+  page?: number;
+  size?: number;
+}
+
+export type VideoListResponse = ApiResponse<PageResult<VideoVO>>;
+
+export interface UserLoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface UserRegisterRequest {
+  username: string;
+  password: string;
+}
+
+export interface UserLoginVO {
+  userId: number;
+  token: string;
+}
+
+export type UserLoginResponse = ApiResponse<UserLoginVO>;
+export type UserRegisterResponse = ApiResponseNoData;
+
+export interface UserMeVO {
+  id: number;
+  username: string;
+  avatar?: string | null;
+  followingCount?: number;
+  followerCount?: number;
+  likeCount?: number;
+  videoUrls?: string[];
+  videoCoverUrls?: string[];
+}
+
+export type UserMeResponse = ApiResponse<UserMeVO>;
+
+export interface UserSearchVO {
+  id: number;
+  username: string;
+  avatar?: string | null;
+  isFollowing?: boolean;
+}
+
+export type UserSearchResponse = ApiResponse<UserSearchVO[]>;
+
+export interface BehaviorDTO {
+  videoId: number;
+}
+
+export interface PlayDTO {
+  videoId: number;
+}
+
+export interface ShareDTO {
+  videoId: number;
+}
+
+export interface CommentCreateDTO {
+  videoId: number;
+  content: string;
+  parentId?: number | null;
+}
+
+export type BehaviorResponse = ApiResponseNoData;
+
+export interface CommentVO {
+  id: number;
+  videoId: number;
+  userId: number;
+  content: string;
+  createTime?: string;
+  username?: string | null;
+  avatar?: string | null;
+  parentId?: number | null;
+  likeCount?: number;
+  isLiked?: boolean | null;
+}
+
+export type CommentListResponse = ApiResponse<PageResult<CommentVO>>;
+
+export interface RecommendVideoVO {
+  id: number;
+  title: string;
+  videoUrl?: string | null;
+  coverUrl?: string | null;
+  description?: string | null;
+  uploaderId?: number | null;
+  uploaderName?: string | null;
+  uploaderAvatar?: string | null;
+  likeCount?: number;
+  commentCount?: number;
+  favoriteCount?: number;
+  shareCount?: number;
+  IsLiked?: boolean | null;
+  IsFavorited?: boolean | null;
+  isLiked?: boolean | null;
+  isFavorited?: boolean | null;
+}
+
+export type RecommendListResponse = ApiResponse<RecommendVideoVO[]>;
+
+export interface RelationActionDTO {
+  targetId: number;
+  actionType: 1 | 2;
 }

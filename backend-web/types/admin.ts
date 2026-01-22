@@ -22,8 +22,8 @@ export type DbUserStatus = 0 | 1;
 
 /**
  * Admin API user status intent (from `接口文档.md` /admin/user/status):
- * - 0: 冻结
- * - 1: 正常
+ * - 0: 正常
+ * - 1: 冻结
  */
 export type AdminUserStatusAction = 0 | 1;
 
@@ -132,15 +132,11 @@ export interface AdminVideoAnalysis {
 export function mapAdminUserStatusActionToDbStatus(
   action: AdminUserStatusAction,
 ): DbUserStatus {
-  // action 0 => 冻结 => db 1
-  // action 1 => 正常 => db 0
-  return action === 0 ? 1 : 0;
+  return action;
 }
 
 export function mapDbUserStatusToAdminUserStatusAction(
   status: DbUserStatus,
 ): AdminUserStatusAction {
-  // db 1 (冻结) => action 0
-  // db 0 (正常) => action 1
-  return status === 1 ? 0 : 1;
+  return status;
 }

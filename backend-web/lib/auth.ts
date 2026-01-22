@@ -76,18 +76,21 @@ export function withAdminAuthHeaders(
   // Preserve existing header values; handle various HeaderInit shapes.
   if (headers instanceof Headers) {
     const h = new Headers(headers);
+    h.set("token", token);
     h.set("Authorization", `${scheme} ${token}`);
     return h;
   }
 
   if (Array.isArray(headers)) {
     const h = new Headers(headers);
+    h.set("token", token);
     h.set("Authorization", `${scheme} ${token}`);
     return Array.from(h.entries());
   }
 
   return {
     ...headers,
+    token,
     Authorization: `${scheme} ${token}`,
   };
 }

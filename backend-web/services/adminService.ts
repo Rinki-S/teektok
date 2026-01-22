@@ -19,6 +19,9 @@ import { apiClient } from "@/services/apiClient";
 import type {
   AdminLoginRequest,
   AdminLoginResponse,
+  AdminUserListParams,
+  PageResult,
+  UserEntity,
   AdminUserStatusRequest,
   AdminUserStatusResponse,
   AdminVideoAuditRequest,
@@ -31,6 +34,7 @@ import type {
 export const ADMIN_ENDPOINTS = {
   login: "/api/admin/login",
   userStatus: "/api/admin/user/status",
+  userList: "/api/admin/user/list",
   videoAudit: "/api/admin/video/audit",
   videoHot: "/api/admin/video/hot",
   videoDelete: (videoId: number) => `/api/admin/video/delete/${videoId}`,
@@ -100,6 +104,18 @@ export async function setUserStatus(
   );
 
   return { code: 200, msg: "success" };
+}
+
+export async function getAdminUserList(
+  params: AdminUserListParams = {},
+): Promise<PageResult<UserEntity>> {
+  const query = new URLSearchParams({
+    page: String(params.page ?? 1),
+    pageSize: String(params.pageSize ?? 10),
+  });
+  return apiClient.get<PageResult<UserEntity>>(
+    `${ADMIN_ENDPOINTS.userList}?${query.toString()}`,
+  );
 }
 
 /**

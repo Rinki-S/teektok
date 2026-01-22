@@ -24,9 +24,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
-import { setUserStatus } from "@/services/adminService";
+import { getAdminUserList, setUserStatus } from "@/services/adminService";
 import type { AdminUserRow, DbUserStatus } from "@/types/admin";
-import { mapDbUserStatusToAdminUserStatusAction } from "@/types/admin";
+import { cn } from "@/lib/utils";
 import {
   Ban,
   CheckCircle2,
@@ -35,11 +35,20 @@ import {
   ShieldAlert,
   Users,
 } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 type LoadState =
-  | { status: "idle" | "loading"; items: AdminUserRow[] }
-  | { status: "success"; items: AdminUserRow[] }
-  | { status: "error"; items: AdminUserRow[]; message: string };
+  | { status: "idle" | "loading"; items: AdminUserRow[]; total: number }
+  | { status: "success"; items: AdminUserRow[]; total: number }
+  | { status: "error"; items: AdminUserRow[]; total: number; message: string };
 
 type ConfirmState =
   | { open: false }
@@ -84,37 +93,34 @@ function statusBadge(status: DbUserStatus) {
   );
 }
 
-function mockUsers(): AdminUserRow[] {
-  // Backend docs currently do not provide an admin user list API.
-  // This mock lets you build the UI now and replace it later with real endpoints.
-  const now = Date.now();
-  return [
-    {
-      id: 1,
-      username: "testuser",
-      status: 0,
-      avatarUrl: null,
-      createdAt: new Date(now - 1000 * 60 * 60 * 24 * 12).toISOString(),
-    },
-    {
-      id: 2,
-      username: "normal_user_02",
-      status: 0,
-      avatarUrl: null,
-      createdAt: new Date(now - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    },
-    {
-      id: 3,
-      username: "frozen_user_03",
-      status: 1,
-      avatarUrl: null,
-      createdAt: new Date(now - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    },
-  ];
+function getPageItems(current: number, total: number) {
+  const pages: (number | "…")[] = [];
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+    return pages;
+  }
+  const push = (x: number | "…") => pages.push(x);
+
+  push(1);
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+
+  if (left > 2) push("…");
+  for (let i = left; i <= right; i++) push(i);
+  if (right < total - 1) push("…");
+  push(total);
+
+  return pages;
 }
 
 export default function AdminUsersPage() {
-  const [state, setState] = useState<LoadState>({ status: "idle", items: [] });
+  const [state, setState] = useState<LoadState>({
+    status: "idle",
+    items: [],
+    total: 0,
+  });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState("");
   const [onlyFrozen, setOnlyFrozen] = useState(false);
 
@@ -124,19 +130,28 @@ export default function AdminUsersPage() {
 
   const load = useCallback(async () => {
     setToast(null);
-    // No /admin/user/list in docs, so we keep mock for now.
-    setState({ status: "loading", items: state.items });
     try {
-      // Replace this with a real call once backend provides user list API.
-      const items = mockUsers();
-      setState({ status: "success", items });
+      setState((prev) => ({ status: "loading", items: prev.items, total: prev.total }));
+      const result = await getAdminUserList({ page, pageSize });
+      const items: AdminUserRow[] = (result.list ?? []).map((u) => ({
+        id: u.id,
+        username: u.username,
+        status: (u.status ?? 0) as DbUserStatus,
+        avatarUrl: u.avatar ?? null,
+        createdAt: u.createTime,
+      }));
+      setState({ status: "success", items, total: result.total ?? 0 });
     } catch (e) {
       const message =
         e instanceof Error ? e.message : "加载失败（后端接口尚未实现或不可达）";
-      setState({ status: "error", items: state.items, message });
+      setState((prev) => ({
+        status: "error",
+        items: prev.items,
+        total: prev.total,
+        message,
+      }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [page, pageSize]);
 
   useEffect(() => {
     void load();
@@ -166,27 +181,18 @@ export default function AdminUsersPage() {
     setToast(null);
 
     try {
-      // Docs endpoint: POST /admin/user/status
-      // Body: { userId, status } with status meaning:
-      //   status: 0 冻结, 1 正常  (API doc)
-      //
-      // DB status: 0 正常, 1 冻结 (DB doc)
-      //
-      // So we must map: nextDbStatus -> action.
-      const actionStatus = mapDbUserStatusToAdminUserStatusAction(nextDbStatus);
-
-      await setUserStatus({ userId: user.id, status: actionStatus });
+      await setUserStatus({ userId: user.id, status: nextDbStatus });
 
       setState((prev) => {
         const next = prev.items.map((it) =>
           it.id === user.id ? { ...it, status: nextDbStatus } : it,
         );
         return prev.status === "error"
-          ? { status: "success", items: next }
-          : { ...prev, items: next };
+          ? { status: "success", items: next, total: prev.total }
+          : { ...prev, items: next, total: prev.total };
       });
 
-      setToast("操作已提交（待后端实现后可验证真实效果）");
+      setToast("操作成功");
       closeConfirm();
     } catch (e) {
       const message = e instanceof Error ? e.message : "操作失败，请稍后再试";
@@ -195,6 +201,16 @@ export default function AdminUsersPage() {
       setIsMutating(false);
     }
   };
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil((state.total ?? 0) / pageSize)),
+    [state.total, pageSize],
+  );
+
+  const pageItems = useMemo(
+    () => getPageItems(page, totalPages),
+    [page, totalPages],
+  );
 
   return (
     <div className="space-y-6">
@@ -207,7 +223,6 @@ export default function AdminUsersPage() {
           <p className="text-sm text-muted-foreground">
             重点动作来自文档接口：
             <span className="font-mono">POST /admin/user/status</span>
-            （列表接口文档未提供，当前使用 mock）
           </p>
         </div>
 
@@ -248,7 +263,7 @@ export default function AdminUsersPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field>
-            <FieldLabel>关键词（ID / 用户名）</FieldLabel>
+            <FieldLabel>关键词（ID / 用户名，前端过滤）</FieldLabel>
             <FieldContent>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -259,6 +274,23 @@ export default function AdminUsersPage() {
                   className="pl-9"
                 />
               </div>
+            </FieldContent>
+          </Field>
+
+          <Field>
+            <FieldLabel>每页条数（pageSize）</FieldLabel>
+            <FieldContent>
+              <Input
+                inputMode="numeric"
+                value={String(pageSize)}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (!Number.isFinite(n) || n <= 0) return;
+                  const next = Math.max(1, Math.min(50, Math.floor(n)));
+                  setPageSize(next);
+                  setPage(1);
+                }}
+              />
             </FieldContent>
           </Field>
 
@@ -349,11 +381,61 @@ export default function AdminUsersPage() {
             </TableBody>
           </Table>
 
-          <div className="mt-3 text-xs text-muted-foreground">
-            说明：当前页面仅实现「冻结/解封」动作对接文档接口，
-            用户列表数据来源待后端补充（建议新增{" "}
-            <span className="font-mono">GET /admin/user/list</span>{" "}
-            或复用现有用户模块接口）。
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-muted-foreground">
+              当前页：<span className="font-mono">{page}</span>，每页：{" "}
+              <span className="font-mono">{pageSize}</span>，总数：{" "}
+              <span className="font-mono">{state.total}</span>
+            </div>
+
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.max(1, p - 1));
+                    }}
+                    className={cn(page <= 1 && "pointer-events-none opacity-50")}
+                  />
+                </PaginationItem>
+
+                {pageItems.map((p, idx) =>
+                  p === "…" ? (
+                    <PaginationItem key={`ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        href="#"
+                        isActive={p === page}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(p);
+                        }}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.min(totalPages, p + 1));
+                    }}
+                    className={cn(
+                      page >= totalPages && "pointer-events-none opacity-50",
+                    )}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>

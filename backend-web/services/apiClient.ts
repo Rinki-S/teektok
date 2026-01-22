@@ -170,7 +170,10 @@ export class ApiClient {
 
     const headers = new Headers(init.headers ?? {});
     const token = await readToken(this.tokenProvider);
-    if (token) headers.set("Authorization", `Bearer ${token}`);
+    if (token) {
+      headers.set("token", token);
+      headers.set("Authorization", `Bearer ${token}`);
+    }
 
     let body: BodyInit | undefined = undefined;
 
