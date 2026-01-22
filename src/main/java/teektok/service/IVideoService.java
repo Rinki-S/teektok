@@ -16,7 +16,7 @@ public interface IVideoService {
     /*
      * 上传短视频
      * */
-    String upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception;
+    void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception;
 
     /*
      * 获取视频列表(分页)
@@ -47,10 +47,5 @@ public interface IVideoService {
      * 获取用户收藏的视频列表
      */
     PageResult<VideoVO> getFavoritedVideos(Long userId, int page, int size);
-
-    /**
-     * 获取当前用户上传的视频列表
-     */
-    PageResult<VideoVO> getMyVideos(Long userId, int page, int size);
 
 }
