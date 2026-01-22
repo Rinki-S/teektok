@@ -16,5 +16,5 @@ public interface IRecommendService {
      * 获取热门视频流
      * @return 组装好的视频卡片列表
      */
-    List<RecommendVideoVO> getHotRecommendFeed(Long userId);
+    List<RecommendVideoVO> getHotRecommendFeed();
 }
