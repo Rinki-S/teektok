@@ -80,7 +80,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     private static final String USER_FOLLOW_KEY = "user:follow:"; // 假设关注也做了缓存
 
     @Override
-    public void upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
+    public String upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
         if (videoUploadDTO.getFile() == null || videoUploadDTO.getFile().isEmpty()) {
             throw new RuntimeException("上传视频不能为空");
         }
@@ -135,6 +135,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         map.put("favoriteCount", 0);
         redisTemplate.opsForHash().putAll(VIDEO_STAT_KEY + video.getId(), map);
         redisTemplate.expire(VIDEO_STAT_KEY + video.getId(), 24, TimeUnit.HOURS);
+        
+        return url;
     }
 
     @Override
@@ -312,6 +314,23 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         }
 
         return buildVideoVOs(videoIds, favoritePage.getTotal());
+    }
+
+    @Override
+    public PageResult<VideoVO> getMyVideos(Long userId, int page, int size) {
+        // 1. 分页查询 video 表
+        Page<Video> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<Video> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Video::getUploaderId, userId)
+                .orderByDesc(Video::getCreateTime);
+        this.page(pageParam, queryWrapper);
+
+        if (pageParam.getRecords().isEmpty()) {
+            return new PageResult<>(Collections.emptyList(), pageParam.getTotal());
+        }
+
+        List<Long> videoIds = pageParam.getRecords().stream().map(Video::getId).toList();
+        return buildVideoVOs(videoIds, pageParam.getTotal());
     }
 
     private PageResult<VideoVO> buildVideoVOs(List<Long> videoIds, long total) {
