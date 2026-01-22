@@ -112,7 +112,10 @@ export default function FriendsPage() {
                 key={user.id}
                 className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm"
               >
-                <div className="flex items-center gap-3">
+                <Link
+                  href={`/user/${user.id}`}
+                  className="flex items-center gap-3 min-w-0"
+                >
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={user.avatar} alt={user.username} />
                     <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
@@ -123,7 +126,7 @@ export default function FriendsPage() {
                     </span>
                     <span className="text-xs text-muted-foreground">ID: {user.id}</span>
                   </div>
-                </div>
+                </Link>
                 <Button variant="outline" size="sm" disabled>
                   朋友
                 </Button>

@@ -6,6 +6,7 @@ import { Heart, Play } from "lucide-react";
 import type { Video } from "@/types/video";
 import { incrementVideoView, getCurrentUserId } from "@/services/videoService";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface VideoItemProps {
   video: Video;
@@ -377,9 +378,13 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
       <div className="absolute bottom-12 left-4 right-24 text-white z-10 pointer-events-none">
         <div className="space-y-2 pointer-events-auto">
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-bold text-lg drop-shadow-md">
+            <Link
+              href={`/user/${video.author.id}`}
+              className="font-bold text-lg drop-shadow-md"
+              onClick={(e) => e.stopPropagation()}
+            >
               @{video.author.username}
-            </span>
+            </Link>
           </div>
           <h3 className="font-bold text-base mb-1 drop-shadow-md">
             {video.title}

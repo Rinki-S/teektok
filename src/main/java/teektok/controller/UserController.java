@@ -7,6 +7,7 @@ import teektok.dto.commen.Result;
 import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
 import teektok.dto.user.UserMeVO;
+import teektok.dto.user.UserProfileVO;
 import teektok.dto.user.UserRegisterDTO;
 import teektok.dto.user.UserSearchVO;
 import teektok.service.IUserService;
@@ -64,6 +65,14 @@ public class UserController {
             return Result.fail(401, "未登录");
         }
         return Result.success(userService.searchUsers(userId, keyword, page, size));
+    }
+
+    @Operation(summary = "获取用户主页信息")
+    @GetMapping("/{id}")
+    public Result<UserProfileVO> getProfile(@PathVariable Long id) {
+        Long currentUserId = BaseContext.getCurrentId();
+        UserProfileVO vo = userService.getUserProfile(currentUserId, id);
+        return Result.success(vo);
     }
 
 }

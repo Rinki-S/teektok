@@ -10,6 +10,7 @@ import { CommentsSheet } from "@/components/comments-sheet";
 import { ShareSheet } from "@/components/share-sheet";
 import { toast } from "sonner";
 import { getCurrentUserId } from "@/services/videoService";
+import Link from "next/link";
 
 interface ShortsActionsProps {
   video: Video;
@@ -36,6 +37,7 @@ export function ShortsActions({
   const isLiked = video.isLiked || false;
   const isBookmarked = video.isBookmarked || false;
   const isFollowing = video.author.isFollowing || false;
+  const isSelf = getCurrentUserId() === video.author.id;
   const likesCount = video.stats.likes;
   const sharesCount = video.stats.shares;
   
@@ -102,18 +104,20 @@ export function ShortsActions({
     <div className="flex flex-col items-center gap-2 p-4 rounded-2xl">
       {/* 作者头像 + 关注按钮 */}
       <div className="relative flex flex-col items-center mb-4">
-        <Avatar className="w-14 h-14 border-2 border-primary">
-          {video.author.avatarUrl && (
-            <AvatarImage
-              src={video.author.avatarUrl}
-              alt={video.author.username}
-            />
-          )}
-          <AvatarFallback>
-            {video.author.username.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        {!isFollowing && (
+        <Link href={`/user/${video.author.id}`}>
+          <Avatar className="w-14 h-14 border-2 border-primary">
+            {video.author.avatarUrl && (
+              <AvatarImage
+                src={video.author.avatarUrl}
+                alt={video.author.username}
+              />
+            )}
+            <AvatarFallback>
+              {video.author.username.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
+        {!isFollowing && !isSelf && (
           <Button
             size="icon-xs"
             className="absolute bottom-0 translate-y-1/2 rounded-full"

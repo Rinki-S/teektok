@@ -241,7 +241,10 @@ export default function FollowingPage() {
                     key={user.id}
                     className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm"
                   >
-                    <div className="flex items-center gap-3">
+                    <Link
+                      href={`/user/${user.id}`}
+                      className="flex items-center gap-3 min-w-0"
+                    >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={user.avatar} alt={user.username} />
                         <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
@@ -254,14 +257,16 @@ export default function FollowingPage() {
                           ID: {user.id}
                         </span>
                       </div>
-                    </div>
+                    </Link>
                     <Button
                       variant={user.isFollowing ? "secondary" : "default"}
                       size="sm"
                       disabled={Boolean(pendingUserIds[user.id])}
-                      onClick={() =>
-                        handleToggleFollowFromSearch(user.id, !user.isFollowing)
-                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void handleToggleFollowFromSearch(user.id, !user.isFollowing);
+                      }}
                     >
                       {user.isFollowing ? "已关注" : "关注"}
                     </Button>
@@ -283,7 +288,10 @@ export default function FollowingPage() {
                 key={user.id}
                 className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm"
               >
-                <div className="flex items-center gap-3">
+                <Link
+                  href={`/user/${user.id}`}
+                  className="flex items-center gap-3 min-w-0"
+                >
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={user.avatar} alt={user.username} />
                     <AvatarFallback>{user.username.slice(0, 2)}</AvatarFallback>
@@ -294,11 +302,15 @@ export default function FollowingPage() {
                     </span>
                     <span className="text-xs text-muted-foreground">ID: {user.id}</span>
                   </div>
-                </div>
+                </Link>
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => handleUnfollow(user.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void handleUnfollow(user.id);
+                  }}
                 >
                   已关注
                 </Button>

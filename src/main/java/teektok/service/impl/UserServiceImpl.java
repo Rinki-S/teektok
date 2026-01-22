@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
 import teektok.dto.user.UserMeVO;
+import teektok.dto.user.UserProfileVO;
 import teektok.dto.user.UserRegisterDTO;
 import teektok.dto.user.UserSearchVO;
 import teektok.entity.Relation;
@@ -153,6 +154,57 @@ public class UserServiceImpl implements IUserService {
                 .map(Video::getCoverUrl)
                 .collect(Collectors.toList());
         vo.setVideoCoverUrls(videoCoverUrls);
+        return vo;
+    }
+
+    @Override
+    public UserProfileVO getUserProfile(Long currentUserId, Long targetUserId) {
+        if (targetUserId == null) {
+            throw new RuntimeException("用户ID不能为空");
+        }
+
+        User user = getUserCached(targetUserId);
+        if (user == null || user.getId() == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        UserProfileVO vo = new UserProfileVO();
+        vo.setId(user.getId());
+        vo.setUsername(user.getUsername());
+        vo.setAvatar(user.getAvatar());
+
+        Long followingCount = relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
+                .eq(Relation::getUserId, targetUserId));
+        vo.setFollowingCount(followingCount);
+
+        Long followerCount = relationMapper.selectCount(new LambdaQueryWrapper<Relation>()
+                .eq(Relation::getTargetId, targetUserId));
+        vo.setFollowerCount(followerCount);
+
+        List<Video> videos = videoMapper.selectList(new LambdaQueryWrapper<Video>()
+                .select(Video::getId)
+                .eq(Video::getUploaderId, targetUserId)
+                .orderByDesc(Video::getCreateTime));
+
+        List<Long> videoIds = videos.stream().map(Video::getId).collect(Collectors.toList());
+        long likeCount = 0L;
+        if (!videoIds.isEmpty()) {
+            List<VideoStat> stats = videoStatMapper.selectBatchIds(videoIds);
+            likeCount = stats.stream()
+                    .map(VideoStat::getLikeCount)
+                    .filter(v -> v != null)
+                    .mapToLong(Long::longValue)
+                    .sum();
+        }
+        vo.setLikeCount(likeCount);
+
+        boolean isFollowing = false;
+        if (currentUserId != null && !currentUserId.equals(targetUserId)) {
+            isFollowing = relationMapper.exists(new LambdaQueryWrapper<Relation>()
+                    .eq(Relation::getUserId, currentUserId)
+                    .eq(Relation::getTargetId, targetUserId));
+        }
+        vo.setIsFollowing(isFollowing);
         return vo;
     }
     @Override

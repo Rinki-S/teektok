@@ -78,6 +78,16 @@ type UserMeVO = {
   videoCoverUrls?: string[];
 };
 
+type UserProfileVO = {
+  id: number;
+  username: string;
+  avatar?: string;
+  followingCount?: number;
+  followerCount?: number;
+  likeCount?: number;
+  isFollowing?: boolean;
+};
+
 function joinUrl(baseUrl: string, path: string) {
   const b = baseUrl.replace(/\/+$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -620,6 +630,34 @@ export async function getMyVideos(
   };
 }
 
+export async function getUserVideos(
+  uploaderId: string,
+  page: number = 1,
+  size: number = 10,
+): Promise<{ list: Video[]; total: number }> {
+  const uploaderIdNum = Number(uploaderId);
+  if (!Number.isFinite(uploaderIdNum)) throw new Error("Invalid uploader ID");
+
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    uploaderId: String(uploaderIdNum),
+  });
+
+  const data = await requestOpenApi<PageResult<VideoVO>>(
+    `/api/video/list?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(data?.list) ? data.list : [];
+  const list = items.map(mapVideoVOToVideo);
+
+  return {
+    list,
+    total: data?.total ?? 0,
+  };
+}
+
 export async function toggleFollowUser(
   request: FollowUserRequest,
 ): Promise<void> {
@@ -658,6 +696,16 @@ export async function getFriendList(): Promise<UserVO[]> {
 
 export async function getMyInfo(): Promise<UserMeVO> {
   const data = await requestOpenApi<UserMeVO>("/api/user/me", {
+    method: "GET",
+  });
+  return data;
+}
+
+export async function getUserProfile(userId: string): Promise<UserProfileVO> {
+  const userIdNum = Number(userId);
+  if (!Number.isFinite(userIdNum)) throw new Error("Invalid user ID");
+
+  const data = await requestOpenApi<UserProfileVO>(`/api/user/${userIdNum}`, {
     method: "GET",
   });
   return data;

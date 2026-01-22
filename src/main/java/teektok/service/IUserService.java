@@ -3,6 +3,7 @@ package teektok.service;
 import teektok.dto.user.UserLoginDTO;
 import teektok.dto.user.UserLoginVO;
 import teektok.dto.user.UserMeVO;
+import teektok.dto.user.UserProfileVO;
 import teektok.dto.user.UserRegisterDTO;
 import teektok.dto.user.UserSearchVO;
 import teektok.entity.User;
@@ -26,6 +27,11 @@ public interface IUserService {
      * 获取当前登录用户的主页详情信息
      */
     UserMeVO getMyInfo(Long userId);
+
+    /**
+     * 获取用户主页详情（可用于他人主页）
+     */
+    UserProfileVO getUserProfile(Long currentUserId, Long targetUserId);
 
     /**
      * 获取用户信息（优先查 Redis 缓存）

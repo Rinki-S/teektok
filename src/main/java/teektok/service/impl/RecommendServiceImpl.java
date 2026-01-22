@@ -9,9 +9,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.entity.RecommendationResult;
+import teektok.entity.Relation;
 import teektok.entity.User;
 import teektok.entity.Video;
 import teektok.entity.VideoStat;
+import teektok.mapper.RelationMapper;
 import teektok.mapper.RecommendationResultMapper;
 import teektok.mapper.UserMapper;
 import teektok.mapper.VideoMapper;
@@ -40,6 +42,8 @@ public class RecommendServiceImpl implements IRecommendService {
     private VideoStatMapper videoStatMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private RelationMapper relationMapper;
 
     // 【新增】注入 StringRedisTemplate 专门处理 Set 集合查询
     @Autowired
@@ -281,6 +285,14 @@ public class RecommendServiceImpl implements IRecommendService {
                 : userMapper.selectBatchIds(uploaderIds).stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
+        Set<Long> followedUploaderIds = Collections.emptySet();
+        if (currentUserId != null && !uploaderIds.isEmpty()) {
+            List<Relation> relations = relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                    .eq(Relation::getUserId, currentUserId)
+                    .in(Relation::getTargetId, uploaderIds));
+            followedUploaderIds = relations.stream().map(Relation::getTargetId).collect(Collectors.toSet());
+        }
+
         // C. 批量查统计信息 (点赞/评论数)
         List<VideoStat> stats = videoStatMapper.selectBatchIds(videoIds);
         Map<Long, VideoStat> statMap = stats.stream()
@@ -325,6 +337,12 @@ public class RecommendServiceImpl implements IRecommendService {
             if (uploader != null) {
                 vo.setUploaderName(uploader.getUsername());
                 vo.setUploaderAvatar(uploader.getAvatar());
+            }
+
+            if (currentUserId != null && video.getUploaderId() != null && !currentUserId.equals(video.getUploaderId())) {
+                vo.setIsFollowed(followedUploaderIds.contains(video.getUploaderId()));
+            } else {
+                vo.setIsFollowed(false);
             }
 
             // 统计信息
@@ -376,6 +394,18 @@ public class RecommendServiceImpl implements IRecommendService {
         String userLikeKey = (userId != null) ? USER_LIKE_KEY_PREFIX + userId : null;
         String userFavoriteKey = (userId != null) ? USER_FAVORITE_KEY_PREFIX + userId : null;
 
+        Set<Long> uploaderIds = videoList.stream()
+                .map(RecommendVideoVO::getUploaderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Long> followedUploaderIds = Collections.emptySet();
+        if (userId != null && !uploaderIds.isEmpty()) {
+            List<Relation> relations = relationMapper.selectList(new LambdaQueryWrapper<Relation>()
+                    .eq(Relation::getUserId, userId)
+                    .in(Relation::getTargetId, uploaderIds));
+            followedUploaderIds = relations.stream().map(Relation::getTargetId).collect(Collectors.toSet());
+        }
+
         for (RecommendVideoVO vo : videoList) {
             // RecommendVideoVO 使用 getId() 获取视频ID
             String videoIdStr = vo.getId().toString();
@@ -393,6 +423,12 @@ public class RecommendServiceImpl implements IRecommendService {
             } else {
                 vo.setIsLiked(false);
                 vo.setIsFavorited(false);
+            }
+
+            if (userId != null && vo.getUploaderId() != null && !userId.equals(vo.getUploaderId())) {
+                vo.setIsFollowed(followedUploaderIds.contains(vo.getUploaderId()));
+            } else {
+                vo.setIsFollowed(false);
             }
 
             // =================================================

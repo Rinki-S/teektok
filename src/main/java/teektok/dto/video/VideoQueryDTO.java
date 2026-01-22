@@ -11,4 +11,7 @@ public class VideoQueryDTO {
 
     @Schema(description = "每页大小", example = "10")
     private Integer size;
+
+    @Schema(description = "作者用户ID（可选）", example = "1")
+    private Long uploaderId;
 }

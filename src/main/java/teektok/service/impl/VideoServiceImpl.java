@@ -157,6 +157,9 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
         // 1. 分页查 DB (只查 Video 主表)
         LambdaQueryWrapper<Video> queryWrapper = new LambdaQueryWrapper<>();
+        if (dto.getUploaderId() != null) {
+            queryWrapper.eq(Video::getUploaderId, dto.getUploaderId());
+        }
         queryWrapper.orderByDesc(Video::getCreateTime);
         this.page(page, queryWrapper);
 

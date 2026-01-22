@@ -30,6 +30,9 @@ public class RecommendVideoVO {
     @Schema(description = "上传者头像")
     private String uploaderAvatar;
 
+    @Schema(description = "是否已关注作者")
+    private Boolean isFollowed;
+
     // --- 互动数据 ---
     @Schema(description = "点赞数")
     private Long likeCount;
