@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import teektok.dto.commen.Result;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.service.IRecommendService;
+import teektok.utils.BaseContext;
 
 import java.util.List;
 
@@ -32,10 +33,12 @@ public class RecommendController {
     @Operation(summary = "获取热门推荐视频流")
     @GetMapping("/hot")
     public Result<List<RecommendVideoVO>> getHot(
-            @PathVariable Long userId,
+            @RequestParam(required = false) Long userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(userId, page, size);
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null) currentUserId = userId;
+        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(currentUserId, page, size);
         return Result.success(list);
     }
 }

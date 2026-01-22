@@ -338,6 +338,8 @@ export async function getHotFeed(
     page: String(page),
     size: String(limit),
   });
+  const userId = getCurrentUserId();
+  if (userId) params.set("userId", userId);
 
   // GET /api/recommend/hot?page=...&size=...
   const data = await requestOpenApi<VideoVO[]>(

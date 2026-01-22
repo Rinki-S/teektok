@@ -34,7 +34,8 @@ public class TokenInterceptor implements HandlerInterceptor {
         // 视频列表、视频详情(ID为数字)、评论列表
         if (requestURI.contains("/api/video/list") || 
             (requestURI.matches(".*/api/video/\\d+$") && "GET".equalsIgnoreCase(request.getMethod())) ||
-            requestURI.contains("/api/comment/list")) {
+            requestURI.contains("/api/comment/list") ||
+            requestURI.contains("/api/recommend/hot")) {
             isOptionalAuth = true;
         }
 
