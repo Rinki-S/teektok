@@ -10,6 +10,7 @@ public class UserMeVO {
     private String avatar;
     private Long followingCount; // 关注数量
     private Long followerCount;  // 粉丝数量
+    private Long likeCount;      // 获赞数（作品收到的点赞总数）
     private List<String> videoUrls; // 用户作品URL列表
     private List<String> videoCoverUrls; // 用户作品封面URL列表
 }

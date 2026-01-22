@@ -14,6 +14,7 @@ import type {
   FollowUserRequest,
   Comment,
 } from "@/types/video";
+import { toast } from "sonner";
 
 // OpenAPI paths already include `/api` prefix.
 const API_BASE_URL =
@@ -57,6 +58,24 @@ type UserVO = {
   username: string;
   avatar?: string;
   // 其他字段视后端返回而定
+};
+
+type UserSearchVO = {
+  id: number;
+  username: string;
+  avatar?: string;
+  isFollowing?: boolean;
+};
+
+type UserMeVO = {
+  id: number;
+  username: string;
+  avatar?: string;
+  followingCount?: number;
+  followerCount?: number;
+  likeCount?: number;
+  videoUrls?: string[];
+  videoCoverUrls?: string[];
 };
 
 function joinUrl(baseUrl: string, path: string) {
@@ -106,7 +125,8 @@ async function requestOpenApi<T>(
         "msg" in parsed &&
         typeof (parsed as { msg?: unknown }).msg === "string"
         ? (parsed as { msg: string }).msg
-        : res.statusText || "Request failed";
+        : `${res.status || ""} ${res.statusText || "Request failed"}`.trim();
+    toast.error(msg);
     throw new Error(msg);
   }
 
@@ -117,7 +137,11 @@ async function requestOpenApi<T>(
     "code" in parsed
   ) {
     const env = parsed as ApiEnvelope<T>;
-    if (env.code !== 200) throw new Error(env.msg || "API error");
+    if (env.code !== 200) {
+      const errorMsg = env.msg || "API error";
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
     return (env.data as T) ?? (undefined as T);
   }
 
@@ -152,6 +176,7 @@ async function requestOpenApiFormData<T>(
         typeof (parsed as { msg?: unknown }).msg === "string"
         ? (parsed as { msg: string }).msg
         : res.statusText || "Request failed";
+    toast.error(msg);
     throw new Error(msg);
   }
 
@@ -162,7 +187,11 @@ async function requestOpenApiFormData<T>(
     "code" in parsed
   ) {
     const env = parsed as ApiEnvelope<T>;
-    if (env.code !== 200) throw new Error(env.msg || "API error");
+    if (env.code !== 200) {
+      const errorMsg = env.msg || "API error";
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
     return (env.data as T) ?? (undefined as T);
   }
 
@@ -258,63 +287,82 @@ export async function getVideoFeed(
   };
 }
 
-export async function getRecommendFeed(userId: string): Promise<VideoListResponse> {
-  // GET /api/recommend/{userId}
-  const data = await requestOpenApi<VideoVO[]>(`/api/recommend/${userId}`, {
-    method: "GET",
+export async function getRecommendFeed(
+  userId: string,
+  cursor?: string,
+  limit: number = 10,
+): Promise<VideoListResponse> {
+  const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(limit),
   });
 
-  // RecommendVideoVO in backend uses 'id' instead of 'videoId', and missing some fields.
-  // We need to map it carefully. 
-  // Ideally backend should return consistent VO. For now we map what we have.
+  // GET /api/recommend/{userId}?page=...&size=...
+  const data = await requestOpenApi<VideoVO[]>(
+    `/api/recommend/${userId}?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
   const items = Array.isArray(data) ? data : [];
-  
-  const videos = items.map(item => {
-    // Adapter for RecommendVideoVO which might use 'id' instead of 'videoId'
+  const videos = items.map((item) => {
     const maybe = item as VideoVO & { id?: unknown };
     const videoId = typeof maybe.id === "number" ? maybe.id : item.videoId;
-    
-    // Construct a VideoVO compatible object
     const vo: VideoVO = {
-        ...item,
-        videoId: videoId,
-        // RecommendVideoVO has 'id', 'title', 'videoUrl', 'coverUrl', 'likeCount', 'commentCount', 'favoriteCount', 'shareCount'
-        // It might be missing uploader info.
+      ...item,
+      videoId: videoId,
     };
     return mapVideoVOToVideo(vo);
   });
 
+  // If we got items, assume there might be more
+  // If we got fewer than limit, we know there's no more
+  const hasMore = items.length === limit;
+
   return {
     videos,
-    nextCursor: undefined, // No pagination for recommend feed currently
-    hasMore: false,
+    nextCursor: hasMore ? String(page + 1) : undefined,
+    hasMore,
   };
 }
 
-export async function getHotFeed(): Promise<VideoListResponse> {
-  // GET /api/recommend/hot
-  const data = await requestOpenApi<VideoVO[]>(`/api/recommend/hot`, {
-    method: "GET",
+export async function getHotFeed(
+  cursor?: string,
+  limit: number = 10,
+): Promise<VideoListResponse> {
+  const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(limit),
   });
 
+  // GET /api/recommend/hot?page=...&size=...
+  const data = await requestOpenApi<VideoVO[]>(
+    `/api/recommend/hot?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
   const items = Array.isArray(data) ? data : [];
-  
-  const videos = items.map(item => {
-    // Adapter for RecommendVideoVO
+  const videos = items.map((item) => {
     const maybe = item as VideoVO & { id?: unknown };
     const videoId = typeof maybe.id === "number" ? maybe.id : item.videoId;
-    
     const vo: VideoVO = {
-        ...item,
-        videoId: videoId,
+      ...item,
+      videoId: videoId,
     };
     return mapVideoVOToVideo(vo);
   });
 
+  const hasMore = items.length === limit;
+
   return {
     videos,
-    nextCursor: undefined, // No pagination for hot feed currently
-    hasMore: false,
+    nextCursor: hasMore ? String(page + 1) : undefined,
+    hasMore,
   };
 }
 
@@ -544,6 +592,29 @@ export async function getFavoritedVideos(
   };
 }
 
+export async function getMyVideos(
+  page: number = 1,
+  size: number = 10,
+): Promise<{ list: Video[]; total: number }> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<VideoVO>>(
+    `/api/video/my?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(data?.list) ? data.list : [];
+  const list = items.map(mapVideoVOToVideo);
+
+  return {
+    list,
+    total: data?.total ?? 0,
+  };
+}
+
 export async function toggleFollowUser(
   request: FollowUserRequest,
 ): Promise<void> {
@@ -577,5 +648,33 @@ export async function getFriendList(): Promise<UserVO[]> {
   const data = await requestOpenApi<UserVO[]>("/api/relation/friend/list", {
     method: "GET",
   });
+  return data || [];
+}
+
+export async function getMyInfo(): Promise<UserMeVO> {
+  const data = await requestOpenApi<UserMeVO>("/api/user/me", {
+    method: "GET",
+  });
+  return data;
+}
+
+export async function searchUsers(
+  keyword: string,
+  page: number = 1,
+  size: number = 20,
+): Promise<UserSearchVO[]> {
+  const kw = keyword.trim();
+  if (!kw) return [];
+
+  const params = new URLSearchParams({
+    keyword: kw,
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<UserSearchVO[]>(
+    `/api/user/search?${params.toString()}`,
+    { method: "GET" },
+  );
   return data || [];
 }

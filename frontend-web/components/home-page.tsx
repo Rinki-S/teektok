@@ -19,6 +19,7 @@ export function HomePage({
     handleFollow,
     handleShare,
     handleComment,
+    loadMoreVideos,
   } = useVideoFeed(undefined, feedType);
 
   const { setState: setNavState, reset: resetNav } = useShortsNav();
@@ -73,6 +74,13 @@ export function HomePage({
       resetNav();
     };
   }, [navState, setNavState, resetNav]);
+
+  useEffect(() => {
+    // 提前加载：当用户看到倒数第 3 个视频时，触发加载下一页
+    if (videos.length > 0 && currentIndex >= videos.length - 3) {
+      loadMoreVideos();
+    }
+  }, [currentIndex, videos.length, loadMoreVideos]);
 
   if (isLoading) {
     return (
