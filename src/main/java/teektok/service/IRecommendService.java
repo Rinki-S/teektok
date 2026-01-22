@@ -20,5 +20,5 @@ public interface IRecommendService {
      * @param size 每页大小
      * @return 组装好的视频卡片列表
      */
-    List<RecommendVideoVO> getHotRecommendFeed(int page, int size);
+    List<RecommendVideoVO> getHotRecommendFeed(Long userId, int page, int size);
 }

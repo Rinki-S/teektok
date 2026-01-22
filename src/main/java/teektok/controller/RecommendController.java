@@ -32,9 +32,10 @@ public class RecommendController {
     @Operation(summary = "获取热门推荐视频流")
     @GetMapping("/hot")
     public Result<List<RecommendVideoVO>> getHot(
+            @PathVariable Long userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(page, size);
+        List<RecommendVideoVO> list = recommendService.getHotRecommendFeed(userId, page, size);
         return Result.success(list);
     }
 }

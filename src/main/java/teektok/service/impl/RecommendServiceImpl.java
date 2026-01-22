@@ -128,7 +128,7 @@ public class RecommendServiceImpl implements IRecommendService {
         }
 
         // 3. 核心步骤：数据聚合 (Data Aggregation)
-        List<RecommendVideoVO> resultList = buildVOs(videoIds);
+        List<RecommendVideoVO> resultList = buildVOs(videoIds, userId);
 
         // ================== 3. 写入 Redis 缓存 ==================
         if (!resultList.isEmpty()) {
@@ -146,7 +146,7 @@ public class RecommendServiceImpl implements IRecommendService {
     }
 
     @Override
-    public List<RecommendVideoVO> getHotRecommendFeed(int page, int size) {
+    public List<RecommendVideoVO> getHotRecommendFeed(Long userId, int page, int size) {
         // 1. 获取推荐的 Video ID 列表
         List<Long> videoIds = Collections.emptyList();
 
@@ -166,13 +166,13 @@ public class RecommendServiceImpl implements IRecommendService {
         videoIds = result.stream().map(Video::getId).collect(Collectors.toList());
 
         // 4. 核心步骤：数据聚合 (Data Aggregation)
-        return buildVOs(videoIds);
+        return buildVOs(videoIds, userId);
     }
 
     /**
      * 内部辅助方法：根据 ID 列表组装完整数据
      */
-    private List<RecommendVideoVO> buildVOs(List<Long> videoIds) {
+    private List<RecommendVideoVO> buildVOs(List<Long> videoIds, Long currentUserId) {
         if (videoIds == null || videoIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -197,6 +197,17 @@ public class RecommendServiceImpl implements IRecommendService {
         List<VideoStat> stats = videoStatMapper.selectBatchIds(videoIds);
         Map<Long, VideoStat> statMap = stats.stream()
                 .collect(Collectors.toMap(VideoStat::getVideoId, Function.identity()));
+
+        //【新增】提前获取用户的点赞和收藏集合 (如果是登录用户)
+        Set<Object> likedVideoIds = new HashSet<>();
+        Set<Object> favoritedVideoIds = new HashSet<>();
+        if (currentUserId != null) {
+            // 从 Redis 获取当前用户点赞的所有视频 ID 集合
+            // 注意：Key 名必须与 BehaviorServiceImpl 中定义的保持一致
+            likedVideoIds = redisTemplate.opsForSet().members("user:like:" + currentUserId);
+            favoritedVideoIds = redisTemplate.opsForSet().members("user:favorite:" + currentUserId);
+        }
+
 
         // D. 组装最终结果
         List<RecommendVideoVO> voList = new ArrayList<>();
@@ -231,6 +242,15 @@ public class RecommendServiceImpl implements IRecommendService {
                 vo.setLikeCount(0L);
                 vo.setCommentCount(0L);
                 vo.setShareCount(0L);
+            }
+
+            // 【关键点修复】设置互动状态
+            if (currentUserId != null) {
+                vo.setIsLiked(likedVideoIds != null && likedVideoIds.contains(vid.toString()));
+                vo.setIsFavorited(favoritedVideoIds != null && favoritedVideoIds.contains(vid.toString()));
+            } else {
+                vo.setIsLiked(false);
+                vo.setIsFavorited(false);
             }
 
             voList.add(vo);
