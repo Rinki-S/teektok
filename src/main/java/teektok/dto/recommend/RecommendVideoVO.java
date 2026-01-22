@@ -18,18 +18,6 @@ public class RecommendVideoVO {
     @Schema(description = "封面图地址")
     private String coverUrl;
 
-    @Schema(description = "视频描述")
-    private String description;
-
-    @Schema(description = "上传者ID")
-    private Long uploaderId;
-
-    @Schema(description = "上传者昵称")
-    private String uploaderName;
-
-    @Schema(description = "上传者头像")
-    private String uploaderAvatar;
-
     // --- 互动数据 ---
     @Schema(description = "点赞数")
     private Long likeCount;

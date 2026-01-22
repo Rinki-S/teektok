@@ -8,11 +8,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.entity.RecommendationResult;
-import teektok.entity.User;
 import teektok.entity.Video;
 import teektok.entity.VideoStat;
 import teektok.mapper.RecommendationResultMapper;
-import teektok.mapper.UserMapper;
 import teektok.mapper.VideoMapper;
 import teektok.mapper.VideoStatMapper;
 import teektok.service.IRecommendService;
@@ -37,18 +35,16 @@ public class RecommendServiceImpl implements IRecommendService {
     private VideoMapper videoMapper;
     @Autowired
     private VideoStatMapper videoStatMapper;
-    @Autowired
-    private UserMapper userMapper;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final String REDIS_KEY_PREFIX = "user:recommend:v2:";
+    private static final String REDIS_KEY_PREFIX = "user:recommend:";
 
     @Override
-    public List<RecommendVideoVO> getPersonalRecommendFeed(Long userId, int page, int size) {
-        // 定义缓存 Key，区分登录用户和游客，以及页码
-        String cacheKey = REDIS_KEY_PREFIX + (userId == null ? "guest" : userId) + ":" + page;
+    public List<RecommendVideoVO> getPersonalRecommendFeed(Long userId) {
+        // 定义缓存 Key，区分登录用户和游客
+        String cacheKey = REDIS_KEY_PREFIX + (userId == null ? "guest" : userId);
 
         // ================== 1. 查询 Redis 缓存 ==================
         //优先从redis中查询推荐列表
@@ -65,10 +61,6 @@ public class RecommendServiceImpl implements IRecommendService {
         }
 
         // ================== 2. 查询 MySQL  ==================
-        // 计算分页 offset
-        int offset = (page - 1) * size;
-        String limitSql = "LIMIT " + offset + ", " + size;
-
         // 1. 获取推荐的 Video ID 列表
         List<Long> videoIds = Collections.emptyList();
 
@@ -76,32 +68,33 @@ public class RecommendServiceImpl implements IRecommendService {
             List<RecommendationResult> results = null;
             try {
                 // 2. 进行实时推荐查询
-                // 登录用户：查推荐表 (按分数倒序)
+                // 登录用户：查推荐表 (按分数倒序取前20)
                 results = recommendationMapper.selectList(
                         new LambdaQueryWrapper<RecommendationResult>()
                                 .eq(RecommendationResult::getUserId, userId)
                                 .eq(RecommendationResult::getType, "REALTIME")
                                 .orderByDesc(RecommendationResult::getScore)
-                                .last(limitSql)
+                                .last("LIMIT 20")
                 );
             } catch (Exception e) {
                 System.err.println("[RECOMMEND] 实时推荐查询失败: " + e.getMessage());
-                results = null;
+                results = null;  // 确保results为null以触发离线查询
             }
 
             if (results == null || results.isEmpty()) {
                 try {
                     //获取离线推荐
+                    // 登录用户：查推荐表 (按分数倒序取前20)
                     results = recommendationMapper.selectList(
                             new LambdaQueryWrapper<RecommendationResult>()
                                     .eq(RecommendationResult::getUserId, userId)
                                     .eq(RecommendationResult::getType, "OFFLINE")
                                     .orderByDesc(RecommendationResult::getScore)
-                                    .last(limitSql)
+                                    .last("LIMIT 20")
                     );
                 } catch (Exception e) {
                     System.err.println("[RECOMMEND] 离线推荐查询失败: " + e.getMessage());
-                    results = Collections.emptyList();
+                    results = Collections.emptyList();  // 确保返回空列表而不是null
                 }
             }
 
@@ -118,7 +111,7 @@ public class RecommendServiceImpl implements IRecommendService {
                             .eq(Video::getIsHot, 1) // 如果有热门字段可开启
                             .eq(Video::getIsDeleted, 0) // 必须是未删除的
                             .orderByDesc(Video::getCreateTime) // 按时间倒序
-                            .last(limitSql)
+                            .last("LIMIT 20")
             );
             videoIds = fallbackVideos.stream().map(Video::getId).collect(Collectors.toList());
         }
@@ -146,26 +139,24 @@ public class RecommendServiceImpl implements IRecommendService {
     }
 
     @Override
-    public List<RecommendVideoVO> getHotRecommendFeed(int page, int size) {
+    public List<RecommendVideoVO> getHotRecommendFeed() {
         // 1. 获取推荐的 Video ID 列表
         List<Long> videoIds = Collections.emptyList();
 
-        int offset = (page - 1) * size;
-        String limitSql = "LIMIT " + offset + ", " + size;
-
-        // 2.查视频表(取is_hot=1)
+        // 2.查视频表(取is_hot=1前20)
         List<Video> result = videoMapper.selectList(
                 new LambdaQueryWrapper<Video>()
                         .eq(Video::getIsHot, 1)
                         .eq(Video::getIsDeleted, 0)
                         .orderByDesc(Video::getCreateTime)
-                        .last(limitSql)
+                        .last("LIMIT 20")
         );
 
         //3. 提取视频ID列表
         videoIds = result.stream().map(Video::getId).collect(Collectors.toList());
 
         // 4. 核心步骤：数据聚合 (Data Aggregation)
+        // 拿着 ID 列表，批量去查 Video表、User表、Stat表，然后在内存里组装
         return buildVOs(videoIds);
     }
 
@@ -182,18 +173,7 @@ public class RecommendServiceImpl implements IRecommendService {
         Map<Long, Video> videoMap = videos.stream()
                 .collect(Collectors.toMap(Video::getId, Function.identity()));
 
-        // B. 批量查作者信息
-        List<Long> uploaderIds = videos.stream()
-                .map(Video::getUploaderId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<Long, User> userMap = uploaderIds.isEmpty()
-                ? Collections.emptyMap()
-                : userMapper.selectBatchIds(uploaderIds).stream()
-                .collect(Collectors.toMap(User::getId, Function.identity()));
-
-        // C. 批量查统计信息 (点赞/评论数)
+        // B. 批量查统计信息 (点赞/评论数)
         List<VideoStat> stats = videoStatMapper.selectBatchIds(videoIds);
         Map<Long, VideoStat> statMap = stats.stream()
                 .collect(Collectors.toMap(VideoStat::getVideoId, Function.identity()));
@@ -211,14 +191,6 @@ public class RecommendServiceImpl implements IRecommendService {
             vo.setTitle(video.getTitle());
             vo.setVideoUrl(video.getVideoUrl());
             vo.setCoverUrl(video.getCoverUrl());
-            vo.setDescription(video.getDescription());
-
-            User uploader = video.getUploaderId() == null ? null : userMap.get(video.getUploaderId());
-            vo.setUploaderId(video.getUploaderId());
-            if (uploader != null) {
-                vo.setUploaderName(uploader.getUsername());
-                vo.setUploaderAvatar(uploader.getAvatar());
-            }
 
             // 统计信息
             VideoStat stat = statMap.get(vid);

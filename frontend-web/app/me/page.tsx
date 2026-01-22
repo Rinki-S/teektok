@@ -3,24 +3,15 @@
 import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getFavoritedVideos, getLikedVideos, getMyInfo, getMyVideos } from "@/services/videoService";
+import { getLikedVideos, getFavoritedVideos } from "@/services/videoService";
 import type { Video } from "@/types/video";
 import Link from "next/link";
-import { Heart, Play } from "lucide-react";
+import { Play } from "lucide-react";
 
 type AuthUser = {
   userId: number;
   username: string;
   token: string;
-};
-
-type UserMe = {
-  id: number;
-  username: string;
-  avatar?: string;
-  followingCount?: number;
-  followerCount?: number;
-  likeCount?: number;
 };
 
 type TabKey = "works" | "likes" | "bookmarks" | "history";
@@ -61,16 +52,9 @@ function VideoGrid({ videos, emptyMessage }: { videos: Video[]; emptyMessage: st
           )}
           <div className="absolute inset-0 bg-black/10 opacity-0 transition-opacity group-hover:opacity-100" />
           <div className="absolute bottom-1 left-1 right-1">
-            <div className="flex items-center gap-2 text-[10px] text-white/90 font-medium truncate drop-shadow-md">
-              <span className="inline-flex items-center gap-1">
-                <Play className="size-3" />
-                {video.stats.views}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Heart className="size-3" />
-                {video.stats.likes}
-              </span>
-            </div>
+             <div className="text-[10px] text-white/90 font-medium truncate drop-shadow-md">
+                {video.stats.views > 0 ? `${video.stats.views}次播放` : video.title}
+             </div>
           </div>
         </Link>
       ))}
@@ -82,9 +66,7 @@ export default function MePage() {
   const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);
   const [activeTab, setActiveTab] = React.useState<TabKey>("works");
   const [isLoading, setIsLoading] = React.useState(true);
-  const [me, setMe] = React.useState<UserMe | null>(null);
   
-  const [worksVideos, setWorksVideos] = React.useState<Video[]>([]);
   const [likedVideos, setLikedVideos] = React.useState<Video[]>([]);
   const [favoritedVideos, setFavoritedVideos] = React.useState<Video[]>([]);
   const [isLoadingList, setIsLoadingList] = React.useState(false);
@@ -108,32 +90,11 @@ export default function MePage() {
 
   React.useEffect(() => {
     if (!authUser) return;
-    getMyInfo()
-      .then((data) => {
-        setMe({
-          id: data.id,
-          username: data.username,
-          avatar: data.avatar,
-          followingCount: data.followingCount,
-          followerCount: data.followerCount,
-          likeCount: data.likeCount,
-        });
-      })
-      .catch((e) => {
-        console.error("Failed to load my info", e);
-      });
-  }, [authUser]);
-
-  React.useEffect(() => {
-    if (!authUser) return;
     
     const fetchList = async () => {
       setIsLoadingList(true);
       try {
-        if (activeTab === "works") {
-            const { list } = await getMyVideos(1, 30);
-            setWorksVideos(list);
-        } else if (activeTab === "likes") {
+        if (activeTab === "likes") {
             const { list } = await getLikedVideos(1, 20);
             setLikedVideos(list);
         } else if (activeTab === "bookmarks") {
@@ -181,36 +142,31 @@ export default function MePage() {
 
   const displayName = authUser.username || "未登录";
   const displayId = authUser.userId ?? 0;
-  const finalName = me?.username || displayName;
-  const finalAvatar = me?.avatar || "";
-  const followingCount = me?.followingCount ?? 0;
-  const followerCount = me?.followerCount ?? 0;
-  const likeCount = me?.likeCount ?? 0;
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center overflow-hidden bg-sidebar px-6 py-8">
-      <div className="w-full max-w-4xl flex flex-col h-full">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start flex-none">
+    <div className="flex h-full min-h-0 w-full flex-1 items-start justify-center overflow-hidden bg-sidebar px-6 py-8">
+      <div className="w-full max-w-4xl">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
           <Avatar size="lg" className="h-20 w-20">
-            <AvatarImage src={finalAvatar} alt={finalName} />
+            <AvatarImage src="" alt={displayName} />
             <AvatarFallback className="text-lg">
-              {finalName.slice(0, 1).toUpperCase()}
+              {displayName.slice(0, 1).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
           <div className="flex-1 space-y-2">
             <div className="text-2xl font-semibold tracking-tight">
-              {finalName}
+              {displayName}
             </div>
             <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
               <span>
-                关注 <span className="text-foreground">{followingCount}</span>
+                关注 <span className="text-foreground">0</span>
               </span>
               <span>
-                粉丝 <span className="text-foreground">{followerCount}</span>
+                粉丝 <span className="text-foreground">0</span>
               </span>
               <span>
-                获赞 <span className="text-foreground">{likeCount}</span>
+                获赞 <span className="text-foreground">0</span>
               </span>
             </div>
             <div className="text-sm text-muted-foreground">
@@ -219,13 +175,12 @@ export default function MePage() {
           </div>
         </div>
 
-        <div className="mt-8 flex-1 min-h-0 flex flex-col">
+        <div className="mt-8">
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as TabKey)}
-            className="flex flex-col h-full"
           >
-            <TabsList className="mb-4 flex flex-wrap gap-2 bg-transparent p-0 flex-none">
+            <TabsList className="mb-4 flex flex-wrap gap-2 bg-transparent p-0">
               {tabLabels.map((tab) => (
                 <TabsTrigger
                   key={tab.key}
@@ -239,17 +194,13 @@ export default function MePage() {
 
             <TabsContent
               value="works"
-              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
+              className="text-sm text-muted-foreground"
             >
-              {isLoadingList ? (
-                <div className="py-12 text-center">加载中...</div>
-              ) : (
-                <VideoGrid videos={worksVideos} emptyMessage="暂无作品内容" />
-              )}
+              暂无作品内容
             </TabsContent>
             <TabsContent
               value="likes"
-              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
+              className="text-sm text-muted-foreground"
             >
               {isLoadingList ? (
                 <div className="py-12 text-center">加载中...</div>
@@ -259,7 +210,7 @@ export default function MePage() {
             </TabsContent>
             <TabsContent
               value="bookmarks"
-              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
+              className="text-sm text-muted-foreground"
             >
               {isLoadingList ? (
                 <div className="py-12 text-center">加载中...</div>
@@ -269,7 +220,7 @@ export default function MePage() {
             </TabsContent>
             <TabsContent
               value="history"
-              className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
+              className="text-sm text-muted-foreground"
             >
               暂无观看历史
             </TabsContent>

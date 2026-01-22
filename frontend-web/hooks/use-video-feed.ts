@@ -12,13 +12,13 @@ import {
   toggleBookmarkVideo,
   toggleFollowUser,
   shareVideo,
+  incrementVideoView,
 } from "@/services/videoService";
 
 interface UseVideoFeedReturn {
   videos: Video[];
   currentIndex: number;
   isLoading: boolean;
-  isLoadingMore: boolean;
   error: string | null;
   handleLike: (videoId: string, isLiked: boolean) => Promise<void>;
   handleBookmark: (videoId: string, isBookmarked: boolean) => Promise<void>;
@@ -36,7 +36,6 @@ export function useVideoFeed(
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
@@ -45,6 +44,15 @@ export function useVideoFeed(
   useEffect(() => {
     loadVideos();
   }, [initialVideoId]);
+
+  // 当前视频变化时，记录播放次数
+  useEffect(() => {
+    if (videos[currentIndex]) {
+      incrementVideoView(videos[currentIndex].id).catch((err) => {
+        console.error("Failed to increment view:", err);
+      });
+    }
+  }, [currentIndex, videos]);
 
   // 加载视频列表
   const loadVideos = async () => {
@@ -90,26 +98,13 @@ export function useVideoFeed(
   // 加载更多视频
   const loadMoreVideos = async () => {
     if (initialVideoId) return; // 单视频模式不加载更多
-    if (!hasMore || isLoading || isLoadingMore) return;
+    if (!hasMore || isLoading) return;
 
     try {
-      setIsLoadingMore(true);
+      setIsLoading(true);
 
-      let response;
-      if (feedType === "recommend") {
-        const userId = getCurrentUserId();
-        if (userId) {
-          response = await getRecommendFeed(userId, nextCursor, 10);
-        } else {
-          // 未登录则回退到热门列表
-          response = await getHotFeed(nextCursor, 10);
-        }
-      } else if (feedType === "hot") {
-        response = await getHotFeed(nextCursor, 10);
-      } else {
-        // 默认为 video feed
-        response = await getVideoFeed(nextCursor, 10);
-      }
+      // TODO: 使用 nextCursor 加载下一页
+      const response = await getVideoFeed(nextCursor, 10);
 
       setVideos((prev) => [...prev, ...response.videos]);
       setNextCursor(response.nextCursor);
@@ -117,7 +112,7 @@ export function useVideoFeed(
     } catch (err) {
       console.error("Error loading more videos:", err);
     } finally {
-      setIsLoadingMore(false);
+      setIsLoading(false);
     }
   };
 
@@ -268,7 +263,6 @@ export function useVideoFeed(
     videos,
     currentIndex,
     isLoading,
-    isLoadingMore,
     error,
     handleLike,
     handleBookmark,
