@@ -4,7 +4,7 @@ import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileSkeleton, VideoGridSkeleton } from "@/components/skeletons";
-import { getFavoritedVideos, getLikedVideos, getMyInfo, getMyVideos } from "@/services/videoService";
+import { getFavoritedVideos, getHistoryVideos, getLikedVideos, getMyInfo, getMyVideos } from "@/services/videoService";
 import type { Video } from "@/types/video";
 import Link from "next/link";
 import { Heart, Play } from "lucide-react";
@@ -88,6 +88,7 @@ export default function MePage() {
   const [worksVideos, setWorksVideos] = React.useState<Video[]>([]);
   const [likedVideos, setLikedVideos] = React.useState<Video[]>([]);
   const [favoritedVideos, setFavoritedVideos] = React.useState<Video[]>([]);
+  const [historyVideos, setHistoryVideos] = React.useState<Video[]>([]);
   const [isLoadingList, setIsLoadingList] = React.useState(false);
 
   React.useEffect(() => {
@@ -140,6 +141,9 @@ export default function MePage() {
         } else if (activeTab === "bookmarks") {
             const { list } = await getFavoritedVideos(1, 20);
             setFavoritedVideos(list);
+        } else if (activeTab === "history") {
+            const { list } = await getHistoryVideos(1, 20);
+            setHistoryVideos(list);
         }
       } catch (e) {
         console.error("Failed to load list", e);
@@ -272,7 +276,11 @@ export default function MePage() {
               value="history"
               className="text-sm text-muted-foreground flex-1 overflow-y-auto min-h-0"
             >
-              暂无观看历史
+              {isLoadingList ? (
+                <div className="py-12 text-center">加载中...</div>
+              ) : (
+                <VideoGrid videos={historyVideos} emptyMessage="暂无观看历史" />
+              )}
             </TabsContent>
           </Tabs>
         </div>

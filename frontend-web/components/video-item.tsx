@@ -134,10 +134,11 @@ export function VideoItem({ video, isActive, onLike }: VideoItemProps) {
     const onPlay = () => {
       if (!isActive) return;
       if (hasCountedPlayRef.current) return;
-      if (videoElement.currentTime > 0.3) return;
 
       hasCountedPlayRef.current = true;
-      incrementVideoView(video.id).catch(() => {});
+      incrementVideoView(video.id).catch((error) => {
+        console.error("incrementVideoView failed", error);
+      });
     };
 
     const onEnded = () => {

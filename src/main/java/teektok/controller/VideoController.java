@@ -98,6 +98,40 @@ public class VideoController {
         return Result.success(videoService.getMyVideos(userId, page, size));
     }
 
+    @Operation(summary = "获取当前用户观看历史")
+    @GetMapping("/history")
+    public Result<PageResult<VideoVO>> getHistoryVideos(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new RuntimeException("请先登录");
+        }
+        return Result.success(videoService.getHistoryVideos(userId, page, size));
+    }
+
+    @Operation(summary = "清空当前用户观看历史")
+    @DeleteMapping("/history")
+    public Result<Void> clearHistory() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new RuntimeException("请先登录");
+        }
+        videoService.clearHistory(userId);
+        return Result.success();
+    }
+
+    @Operation(summary = "删除当前用户某个视频的观看历史")
+    @DeleteMapping("/history/{videoId}")
+    public Result<Void> deleteHistoryVideo(@PathVariable Long videoId) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new RuntimeException("请先登录");
+        }
+        videoService.deleteHistoryVideo(userId, videoId);
+        return Result.success();
+    }
+
     // ==================== 播放视频 ====================
 
 /*    @Operation(summary = "播放视频（记录播放行为）")

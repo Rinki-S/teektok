@@ -14,6 +14,8 @@ import {
   shareVideo,
 } from "@/services/videoService";
 
+const FEED_PAGE_SIZE = 15;
+
 interface UseVideoFeedReturn {
   videos: Video[];
   currentIndex: number;
@@ -69,7 +71,7 @@ export function useVideoFeed(
           response = await getHotFeed();
         } else {
           // 默认为 video feed
-          response = await getVideoFeed(undefined, 10);
+          response = await getVideoFeed(undefined, FEED_PAGE_SIZE);
         }
 
         setVideos(response.videos);
@@ -106,12 +108,17 @@ export function useVideoFeed(
         if (feedType === "recommend") {
           const userId = getCurrentUserId();
           if (userId) {
-            refreshed = await getRecommendFeed(userId, undefined, 10, refreshKey);
+            refreshed = await getRecommendFeed(
+              userId,
+              undefined,
+              FEED_PAGE_SIZE,
+              refreshKey
+            );
           } else {
-            refreshed = await getHotFeed(undefined, 10, refreshKey);
+            refreshed = await getHotFeed(undefined, FEED_PAGE_SIZE, refreshKey);
           }
         } else {
-          refreshed = await getHotFeed(undefined, 10, refreshKey);
+          refreshed = await getHotFeed(undefined, FEED_PAGE_SIZE, refreshKey);
         }
 
         if (!refreshed.videos.length) {
@@ -146,16 +153,16 @@ export function useVideoFeed(
       if (feedType === "recommend") {
         const userId = getCurrentUserId();
         if (userId) {
-          response = await getRecommendFeed(userId, nextCursor, 10);
+          response = await getRecommendFeed(userId, nextCursor, FEED_PAGE_SIZE);
         } else {
           // 未登录则回退到热门列表
-          response = await getHotFeed(nextCursor, 10);
+          response = await getHotFeed(nextCursor, FEED_PAGE_SIZE);
         }
       } else if (feedType === "hot") {
-        response = await getHotFeed(nextCursor, 10);
+        response = await getHotFeed(nextCursor, FEED_PAGE_SIZE);
       } else {
         // 默认为 video feed
-        response = await getVideoFeed(nextCursor, 10);
+        response = await getVideoFeed(nextCursor, FEED_PAGE_SIZE);
       }
 
       if (!response.videos.length) {

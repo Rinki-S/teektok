@@ -36,6 +36,7 @@ public class TokenInterceptor implements HandlerInterceptor {
             (requestURI.matches(".*/api/video/\\d+$") && "GET".equalsIgnoreCase(request.getMethod())) ||
             requestURI.contains("/api/comment/list") ||
             requestURI.contains("/api/recommend/hot") ||
+            requestURI.contains("/api/behavior/play") ||
             (requestURI.matches(".*/api/user/\\d+$") && "GET".equalsIgnoreCase(request.getMethod()))) {
             isOptionalAuth = true;
         }

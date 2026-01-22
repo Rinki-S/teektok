@@ -53,4 +53,19 @@ public interface IVideoService {
      */
     PageResult<VideoVO> getMyVideos(Long userId, int page, int size);
 
+    /**
+     * 获取当前用户观看历史（按最近观看时间倒序）
+     */
+    PageResult<VideoVO> getHistoryVideos(Long userId, int page, int size);
+
+    /**
+     * 清空当前用户观看历史
+     */
+    void clearHistory(Long userId);
+
+    /**
+     * 删除当前用户某个视频的观看历史
+     */
+    void deleteHistoryVideo(Long userId, Long videoId);
+
 }

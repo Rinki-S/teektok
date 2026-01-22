@@ -88,6 +88,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
     private static final String VIDEO_INFO_KEY = "video:info:";
 
+    private static final int BEHAVIOR_TYPE_PLAY = 1;
+
     @Override
     public String upload(VideoUploadDTO videoUploadDTO,Long uploaderId) throws Exception {
         if (videoUploadDTO.getFile() == null || videoUploadDTO.getFile().isEmpty()) {
@@ -393,6 +395,49 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
         }).collect(Collectors.toList());
 
         return new PageResult<>(voList, pageParam.getTotal());
+    }
+
+    @Override
+    public PageResult<VideoVO> getHistoryVideos(Long userId, int page, int size) {
+        int current = Math.max(1, page);
+        int pageSize = Math.max(1, size);
+
+        long total = userBehaviorMapper.countDistinctVideoIdsByUserAndType(userId, BEHAVIOR_TYPE_PLAY);
+        if (total <= 0) {
+            return new PageResult<>(Collections.emptyList(), 0);
+        }
+
+        long offset = (long) (current - 1) * pageSize;
+        if (offset >= total) {
+            return new PageResult<>(Collections.emptyList(), total);
+        }
+
+        List<Long> videoIds = userBehaviorMapper.selectDistinctVideoIdsByUserAndTypeOrderByLatestTime(
+                userId,
+                BEHAVIOR_TYPE_PLAY,
+                offset,
+                pageSize
+        );
+        if (videoIds == null || videoIds.isEmpty()) {
+            return new PageResult<>(Collections.emptyList(), total);
+        }
+
+        return buildVideoVOs(videoIds, total);
+    }
+
+    @Override
+    public void clearHistory(Long userId) {
+        userBehaviorMapper.delete(new LambdaQueryWrapper<UserBehavior>()
+                .eq(UserBehavior::getUserId, userId)
+                .eq(UserBehavior::getBehaviorType, BEHAVIOR_TYPE_PLAY));
+    }
+
+    @Override
+    public void deleteHistoryVideo(Long userId, Long videoId) {
+        userBehaviorMapper.delete(new LambdaQueryWrapper<UserBehavior>()
+                .eq(UserBehavior::getUserId, userId)
+                .eq(UserBehavior::getVideoId, videoId)
+                .eq(UserBehavior::getBehaviorType, BEHAVIOR_TYPE_PLAY));
     }
 
     private PageResult<VideoVO> buildVideoVOs(List<Long> videoIds, long total) {

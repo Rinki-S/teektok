@@ -270,7 +270,7 @@ export function getCurrentUserId(): string | null {
 
 export async function getVideoFeed(
   cursor?: string,
-  limit: number = 10,
+  limit: number = 15,
 ): Promise<VideoListResponse> {
   // OpenAPI 并没有 cursor 分页；这里用 page/size 做适配。
   // cursor 为空 => page=1；cursor=数字字符串 => page=Number(cursor)
@@ -301,7 +301,7 @@ export async function getVideoFeed(
 export async function getRecommendFeed(
   userId: string,
   cursor?: string,
-  limit: number = 10,
+  limit: number = 15,
   refresh?: string,
 ): Promise<VideoListResponse> {
   const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
@@ -341,7 +341,7 @@ export async function getRecommendFeed(
 
 export async function getHotFeed(
   cursor?: string,
-  limit: number = 10,
+  limit: number = 15,
   refresh?: string,
 ): Promise<VideoListResponse> {
   const page = cursor ? Math.max(1, Number(cursor) || 1) : 1;
@@ -601,6 +601,29 @@ export async function getFavoritedVideos(
   const items = Array.isArray(data?.list) ? data.list : [];
   const list = items.map(mapVideoVOToVideo);
   
+  return {
+    list,
+    total: data?.total ?? 0,
+  };
+}
+
+export async function getHistoryVideos(
+  page: number = 1,
+  size: number = 10,
+): Promise<{ list: Video[]; total: number }> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const data = await requestOpenApi<PageResult<VideoVO>>(
+    `/api/video/history?${params.toString()}`,
+    { method: "GET" },
+  );
+
+  const items = Array.isArray(data?.list) ? data.list : [];
+  const list = items.map(mapVideoVOToVideo);
+
   return {
     list,
     total: data?.total ?? 0,
