@@ -102,6 +102,7 @@ async function requestOpenApi<T>(
   init: RequestInit = {},
 ): Promise<T> {
   const url = joinUrl(API_BASE_URL, path);
+  console.log(`[API Request] ${init.method || 'GET'} ${url}`, init.body); // 前端日志
 
   const token = getAuthToken();
 

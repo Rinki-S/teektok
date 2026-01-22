@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import teektok.VO.PageResult;
@@ -76,6 +77,9 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
     // Redis Key 常量 (需与 BehaviorService 保持一致)
     private static final String VIDEO_STAT_KEY = "video:stat:";
     private static final String USER_LIKE_KEY = "user:like:";
@@ -132,16 +136,16 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
         // 【优化】预热 Redis 统计数据
         // 上传完立刻把 0 写进 Redis，这样用户刷到时直接读 Redis，不用回源 DB
-        Map<String, Object> map = new HashMap<>();
-        map.put("playCount", 0);
-        map.put("likeCount", 0);
-        map.put("commentCount", 0);
-        map.put("shareCount", 0);
-        map.put("favoriteCount", 0);
-        redisTemplate.opsForHash().putAll(VIDEO_STAT_KEY + video.getId(), map);
+        Map<String, String> map = new HashMap<>();
+        map.put("playCount", "0");
+        map.put("likeCount", "0");
+        map.put("commentCount", "0");
+        map.put("shareCount", "0");
+        map.put("favoriteCount", "0");
+        stringRedisTemplate.opsForHash().putAll(VIDEO_STAT_KEY + video.getId(), map);
         long timeout = 24 * 60 * 60 + new Random().nextInt(3600); // 24小时 + 0~1小时随机
-        redisTemplate.expire(VIDEO_STAT_KEY + video.getId(), timeout, TimeUnit.HOURS);
-        redisTemplate.expire(VIDEO_STAT_KEY + video.getId(), 24, TimeUnit.HOURS);
+        stringRedisTemplate.expire(VIDEO_STAT_KEY + video.getId(), timeout, TimeUnit.SECONDS);
+        stringRedisTemplate.expire(VIDEO_STAT_KEY + video.getId(), 24, TimeUnit.HOURS);
         return url;
     }
 
@@ -433,8 +437,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
             // A. 尝试走 Redis Pipeline 查询
             // 注意：这里我们判断 hasKey。如果 key 存在（哪怕是空集占位符），都算命中缓存
-            if (Boolean.TRUE.equals(redisTemplate.hasKey(followKey))) {
-                List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(followKey))) {
+                List<Object> results = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
                     for (Long uploaderId : uploaderIds) {
                         connection.sIsMember(followKey.getBytes(), uploaderId.toString().getBytes());
                     }
@@ -529,7 +533,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
         List<Object> results;
         try {
-            results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            results = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
                 for (Long vid : videoIds) {
                     String key = VIDEO_STAT_KEY + vid;
                     connection.hGetAll(key.getBytes());
@@ -586,17 +590,17 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
                     if (dbStats != null && !dbStats.isEmpty()) {
                         // B. 回写 Redis
-                        redisTemplate.executePipelined(new org.springframework.data.redis.core.SessionCallback<Object>() {
+                        stringRedisTemplate.executePipelined(new org.springframework.data.redis.core.SessionCallback<Object>() {
                             @Override
                             public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
                                 for (VideoStat stat : dbStats) {
                                     String key = VIDEO_STAT_KEY + stat.getVideoId();
-                                    Map<String, Object> map = new HashMap<>();
-                                    map.put("playCount", stat.getPlayCount());
-                                    map.put("likeCount", stat.getLikeCount());
-                                    map.put("commentCount", stat.getCommentCount());
-                                    map.put("shareCount", stat.getShareCount());
-                                    map.put("favoriteCount", stat.getFavoriteCount());
+                                    Map<String, String> map = new HashMap<>();
+                                    map.put("playCount", String.valueOf(stat.getPlayCount()));
+                                    map.put("likeCount", String.valueOf(stat.getLikeCount()));
+                                    map.put("commentCount", String.valueOf(stat.getCommentCount()));
+                                    map.put("shareCount", String.valueOf(stat.getShareCount()));
+                                    map.put("favoriteCount", String.valueOf(stat.getFavoriteCount()));
 
                                     operations.opsForHash().putAll(key, map);
                                     operations.expire(key, 24, TimeUnit.HOURS);
@@ -702,7 +706,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video> implements
 
     private boolean safeIsMember(String key, String member) {
         try {
-            return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(key, member));
+            return Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(key, member));
         } catch (Exception ignored) {
             return false;
         }

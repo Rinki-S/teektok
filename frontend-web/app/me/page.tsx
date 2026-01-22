@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProfileSkeleton, VideoGridSkeleton } from "@/components/skeletons";
 import { getFavoritedVideos, getLikedVideos, getMyInfo, getMyVideos } from "@/services/videoService";
 import type { Video } from "@/types/video";
 import Link from "next/link";
@@ -151,7 +152,7 @@ export default function MePage() {
   }, [authUser, activeTab]);
 
   if (isLoading) {
-    return null;
+    return <ProfileSkeleton />;
   }
 
   if (!authUser) {

@@ -38,6 +38,7 @@ public class BehaviorController {
     @Operation(summary = "点赞视频")
     @PostMapping("/like")
     public Result<Void> like(@RequestBody BehaviorDTO dto) {
+        System.out.println("收到点赞请求: videoId=" + dto.getVideoId()); // 临时日志
         behaviorService.like(dto.getVideoId(), getCurrentUserId());
         return Result.success();
     }
@@ -85,6 +86,7 @@ public class BehaviorController {
     @Operation(summary = "收藏视频")
     @PostMapping("/favorite")
     public Result<Void> favorite(@RequestBody BehaviorDTO dto) {
+        System.out.println("收到收藏请求: videoId=" + dto.getVideoId()); // 临时日志
         behaviorService.favorite(dto.getVideoId(), getCurrentUserId());
         return Result.success();
     }

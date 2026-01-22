@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShortsNav } from "@/components/shorts-nav-context";
 import { useVideoFeed } from "@/hooks/use-video-feed";
+import { VideoFeedSkeleton } from "@/components/skeletons";
 import { VideoFeed, type VideoFeedHandle } from "@/components/video-feed";
 
 export function HomePage({
@@ -84,11 +85,8 @@ export function HomePage({
 
   if (isLoading) {
     return (
-      <div className="flex w-full h-full min-h-0 items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">加载中...</p>
-        </div>
+      <div className="relative flex h-full min-h-0 w-full flex-1 overflow-hidden bg-sidebar">
+        <VideoFeedSkeleton />
       </div>
     );
   }

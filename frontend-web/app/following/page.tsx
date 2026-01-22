@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getFollowList, searchUsers, toggleFollowUser } from "@/services/videoService";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { UserListSkeleton } from "@/components/skeletons";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
@@ -149,7 +150,16 @@ export default function FollowingPage() {
   };
 
   if (isLoading) {
-    return null;
+    return (
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-sidebar">
+        <div className="flex w-full flex-col gap-4 p-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-foreground">关注列表</h1>
+          </div>
+          <UserListSkeleton />
+        </div>
+      </div>
+    );
   }
 
   if (!authUser) {

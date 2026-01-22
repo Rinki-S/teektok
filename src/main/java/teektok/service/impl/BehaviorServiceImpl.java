@@ -105,10 +105,10 @@ import java.util.function.Function;
         String userLikeKey = USER_LIKE_KEY + userId;
 
         // 1. Redis 预检查 (防重复)
-        Boolean isMember = redisTemplate.opsForSet().isMember(userLikeKey, videoId.toString());
-        if (Boolean.TRUE.equals(isMember)) {
-            return;
-        }
+        // Boolean isMember = redisTemplate.opsForSet().isMember(userLikeKey, videoId.toString());
+        // if (Boolean.TRUE.equals(isMember)) {
+        //    return;
+        // }
 
         // 2. 插入点赞状态记录 (video_like 表)
         try {
@@ -117,12 +117,14 @@ import java.util.function.Function;
             like.setVideoId(videoId);
             like.setCreateTime(LocalDateTime.now());
             videoLikeMapper.insert(like);
+            // 【同步兜底】直接更新 DB 统计数据，保证数据一致性
+            videoStatMapper.incrLikeCount(videoId, 1);
         } catch (Exception e) {
             log.warn("重复点赞 (DB已存在): uid={}, vid={}", userId, videoId);
         }
 
-        // 3. 【核心优化】Redis 缓冲计数 (替代 videoStatMapper.incrLikeCount)
-        redisTemplate.opsForHash().increment(BUFFER_LIKE_KEY, videoId.toString(), 1);
+        // 3. 【暂存】Redis 缓冲计数 (已启用同步更新，暂时注释异步缓冲以防双重计数)
+        // redisTemplate.opsForHash().increment(BUFFER_LIKE_KEY, videoId.toString(), 1);
 
         // 4. 更新 Redis
         redisTemplate.opsForSet().add(userLikeKey, videoId.toString());
@@ -220,9 +222,11 @@ import java.util.function.Function;
 
         // 只有确实删除了记录（即之前确实有收藏），才进行后续的计数扣减
         if (rows > 0) {
-            // 2. 【核心优化】Redis 缓冲计数 -1 (替代 videoStatMapper.incrFavoriteCount)
-            // 写入缓冲，让定时任务去批量扣减 MySQL
-            redisTemplate.opsForHash().increment(BUFFER_FAVORITE_KEY, videoId.toString(), -1);
+            // 2. 【同步更新】直接更新 DB 统计数据
+            videoStatMapper.incrCollectCount(videoId, -1);
+
+            // 【暂存】Redis 缓冲计数 -1
+            // redisTemplate.opsForHash().increment(BUFFER_FAVORITE_KEY, videoId.toString(), -1);
 
             // 3. 更新 Redis 缓存状态 (移除 Set 中的 videoId)
             redisTemplate.opsForSet().remove(userFavKey, videoId.toString());
@@ -436,14 +440,14 @@ import java.util.function.Function;
     @Scheduled(fixedRate = 5000)
     public void syncVideoStatsToDB() {
         log.info("开始同步视频统计数据...");
-        syncBufferToDBUtil.syncBufferToDB(BUFFER_PLAY_KEY, "play_count");
-        syncBufferToDBUtil.syncBufferToDB(BUFFER_LIKE_KEY, "like_count");
-        syncBufferToDBUtil.syncBufferToDB(BUFFER_FAVORITE_KEY, "favorite_count");
-        syncBufferToDBUtil.syncBufferToDB(BUFFER_COMMENT_KEY, "comment_count");
-        syncBufferToDBUtil.syncBufferToDB(BUFFER_SHARE_KEY, "share_count");
+        try { syncBufferToDBUtil.syncBufferToDB(BUFFER_PLAY_KEY, "play_count"); } catch (Exception e) { log.error("同步播放数失败", e); }
+        try { syncBufferToDBUtil.syncBufferToDB(BUFFER_LIKE_KEY, "like_count"); } catch (Exception e) { log.error("同步点赞数失败", e); }
+        try { syncBufferToDBUtil.syncBufferToDB(BUFFER_FAVORITE_KEY, "favorite_count"); } catch (Exception e) { log.error("同步收藏数失败", e); }
+        try { syncBufferToDBUtil.syncBufferToDB(BUFFER_COMMENT_KEY, "comment_count"); } catch (Exception e) { log.error("同步评论数失败", e); }
+        try { syncBufferToDBUtil.syncBufferToDB(BUFFER_SHARE_KEY, "share_count"); } catch (Exception e) { log.error("同步分享数失败", e); }
 
         // 【新增】同步评论点赞数
-        syncCommentLikesToDB();
+        try { syncCommentLikesToDB(); } catch (Exception e) { log.error("同步评论点赞数失败", e); }
     }
 
     /**
