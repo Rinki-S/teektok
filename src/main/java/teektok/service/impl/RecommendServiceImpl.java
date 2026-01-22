@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import teektok.dto.recommend.RecommendVideoVO;
 import teektok.entity.RecommendationResult;
@@ -39,6 +40,10 @@ public class RecommendServiceImpl implements IRecommendService {
     private VideoStatMapper videoStatMapper;
     @Autowired
     private UserMapper userMapper;
+
+    // 【新增】注入 StringRedisTemplate 专门处理 Set 集合查询
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -198,15 +203,23 @@ public class RecommendServiceImpl implements IRecommendService {
         Map<Long, VideoStat> statMap = stats.stream()
                 .collect(Collectors.toMap(VideoStat::getVideoId, Function.identity()));
 
-        //【新增】提前获取用户的点赞和收藏集合 (如果是登录用户)
-        Set<Object> likedVideoIds = new HashSet<>();
-        Set<Object> favoritedVideoIds = new HashSet<>();
+        // ================== 【修复部分开始】 ==================
+        // 使用 Set<String> 明确类型，避免 Object 类型转换坑
+        Set<String> likedVideoIds = Collections.emptySet();
+        Set<String> favoritedVideoIds = Collections.emptySet();
         if (currentUserId != null) {
-            // 从 Redis 获取当前用户点赞的所有视频 ID 集合
-            // 注意：Key 名必须与 BehaviorServiceImpl 中定义的保持一致
-            likedVideoIds = redisTemplate.opsForSet().members("user:like:" + currentUserId);
-            favoritedVideoIds = redisTemplate.opsForSet().members("user:favorite:" + currentUserId);
+            try {
+                // 使用 stringRedisTemplate 读取，确保读出来的一定是 String
+                Set<String> likes = stringRedisTemplate.opsForSet().members("user:like:" + currentUserId);
+                if (likes != null) likedVideoIds = likes;
+
+                Set<String> favs = stringRedisTemplate.opsForSet().members("user:favorite:" + currentUserId);
+                if (favs != null) favoritedVideoIds = favs;
+            } catch (Exception e) {
+                log.error("获取用户互动状态失败", e);
+            }
         }
+        // ================== 【修复部分结束】 ==================
 
 
         // D. 组装最终结果
@@ -244,10 +257,11 @@ public class RecommendServiceImpl implements IRecommendService {
                 vo.setShareCount(0L);
             }
 
-            // 【关键点修复】设置互动状态
+            // 【关键点修复】
+            // 此时 likedVideoIds 是 Set<String>，vid.toString() 也是 String，类型匹配，判断正确
             if (currentUserId != null) {
-                vo.setIsLiked(likedVideoIds != null && likedVideoIds.contains(vid.toString()));
-                vo.setIsFavorited(favoritedVideoIds != null && favoritedVideoIds.contains(vid.toString()));
+                vo.setIsLiked(likedVideoIds.contains(vid.toString()));
+                vo.setIsFavorited(favoritedVideoIds.contains(vid.toString()));
             } else {
                 vo.setIsLiked(false);
                 vo.setIsFavorited(false);
